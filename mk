@@ -5,7 +5,7 @@ APP=webtools
 
 ###### Flags start ##### {~flags:
 DRIVER=0
-DATAGEN=0
+DATAGEN=1
 ###### Flags end   ##### ~}
 
 if [ "$DRIVER" -ne "0" ]; then

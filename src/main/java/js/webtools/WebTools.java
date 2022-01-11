@@ -50,6 +50,7 @@ public final class WebTools {
   // them as parameters with this key
   public static final String PATH_SUFFIX_KEY = "_path_suffix";
 
+  @Deprecated
   public static final String RESOURCE_PATH = "r";
 
   // Constants originally supplied by javax.servlet.http.HttpServletResponse
