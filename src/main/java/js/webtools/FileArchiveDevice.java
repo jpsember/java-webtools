@@ -32,7 +32,7 @@ import java.util.List;
 import js.webtools.gen.CloudFileEntry;
 import js.file.Files;
 
-public class FileArchiveDevice implements ArchiveDevice {
+public class FileArchiveDevice extends ArchiveDevice {
 
   public FileArchiveDevice(File rootDirectory) {
     loadTools();
@@ -63,6 +63,8 @@ public class FileArchiveDevice implements ArchiveDevice {
 
   @Override
   public void pull(String name, File destination) {
+    if (destination.isDirectory())
+      destination = new File(destination, name);
     File source = fileWithinArchive(name);
     files().copyFile(source, destination);
   }
@@ -85,4 +87,5 @@ public class FileArchiveDevice implements ArchiveDevice {
   private final File mRootDir;
   private boolean mDryRun;
   private Files mFiles;
+
 }

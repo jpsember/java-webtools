@@ -30,7 +30,7 @@ import java.io.File;
 import java.util.List;
 
 import js.webtools.gen.CloudFileEntry;
-import js.base.BaseObject;
+import js.base.DateTimeTools;
 import js.base.SystemCall;
 import js.file.FileException;
 import js.file.Files;
@@ -38,7 +38,7 @@ import js.json.JSList;
 import js.json.JSMap;
 import js.parsing.RegExp;
 
-public class S3Archive extends BaseObject implements ArchiveDevice {
+public class S3Archive extends ArchiveDevice {
 
   public S3Archive(String profileName, String bucketName, String subfolderPath, File projectDirectoryOrNull) {
     checkArgument(RegExp.patternMatchesString("^\\w+(?:\\.\\w+)*(?:\\/\\w+(?:\\.\\w+)*)*$", bucketName),
@@ -91,6 +91,16 @@ public class S3Archive extends BaseObject implements ArchiveDevice {
   public void push(File source, String name) {
     if (isDryRun())
       return;
+
+    if (nullOrEmpty(name))
+      name = source.getName();
+
+    if (writesDisabled()) {
+      alert("Not writing any files to S3 (for dev purposes); just delaying a bit");
+      DateTimeTools.sleepForRealMs(15000);
+      return;
+    }
+
     SystemCall sc = s3APICall();
     sc.arg("put-object");
     sc.arg("--bucket", mBareBucket);
@@ -104,6 +114,9 @@ public class S3Archive extends BaseObject implements ArchiveDevice {
     if (isDryRun())
       return;
 
+    if (destination.isDirectory())
+      destination = new File(destination, name);
+   
     SystemCall sc = s3APICall();
     sc.arg("get-object");
     sc.arg("--bucket", mBareBucket);

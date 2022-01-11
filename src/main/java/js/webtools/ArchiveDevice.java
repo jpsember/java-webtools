@@ -1,35 +1,70 @@
 package js.webtools;
 
+import static js.base.Tools.*;
+
 import java.io.File;
 import java.util.List;
 
+import js.base.BaseObject;
 import js.webtools.gen.CloudFileEntry;
 
 /**
  * Interface to a filesystem that acts as an external storage device, e.g. AWS
  * S3
  */
-public interface ArchiveDevice {
+public abstract class ArchiveDevice extends BaseObject {
 
-  void setDryRun(boolean dryRun);
+  public abstract void setDryRun(boolean dryRun);
 
   /**
    * Determine if an object exists in the archive
    */
-  boolean fileExists(String name);
+  public abstract boolean fileExists(String name);
 
   /**
    * Push a local object to the archive
+   * 
+   * @param name
+   *          if null or empty, uses source.getName()
    */
-  void push(File source, String name);
+  public abstract void push(File source, String name);
 
   /**
    * Pull an object from the archive to the local machine
+   * 
+   * @param destination
+   *          if this is a directory, pulls to a file in this directory with
+   *          name 'name'
    */
-  void pull(String name, File destination);
+  public abstract void pull(String name, File destination);
 
   /**
    * Get a list of items within the archive
    */
-  List<CloudFileEntry> listFiles(String prefixOrNull);
+  public abstract List<CloudFileEntry> listFiles(String prefixOrNull);
+
+  /**
+   * For test purposes: simulate a network outage for any subsequent calls
+   */
+  public final void setSimulatedNetworkProblem(boolean flag) {
+    if (mSimulatedNetworkProblem == flag)
+      return;
+    pr("=== ArchiveDevice simulated network problem state changing to:", flag);
+    mSimulatedNetworkProblem = flag;
+  }
+
+  public final void setWritesDisabled(boolean flag) {
+    if (mWritesDisabled == flag)
+      return;
+    pr("=== ArchiveDevice writes disabled changing to:", flag);
+    mWritesDisabled = flag;
+  }
+
+  public final boolean writesDisabled() {
+    return mWritesDisabled;
+  }
+
+  private boolean mSimulatedNetworkProblem;
+  private boolean mWritesDisabled;
+
 }
