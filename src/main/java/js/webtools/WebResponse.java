@@ -266,7 +266,7 @@ public final class WebResponse extends BaseObject {
    */
   public byte[] readBytesFromRequestBody() {
     if (mRequestBody == null) {
-      setRequestBody(Files.toByteArray(openRequestBodyInputStream()));
+      setRequestBody(Files.toByteArray(openRequestBodyInputStream(), "readBytesFromRequestBody"));
     }
     return mRequestBody;
   }
