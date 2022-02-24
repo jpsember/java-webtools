@@ -80,10 +80,14 @@ public class S3Archive extends ArchiveDevice {
       if (sysErr.contains(optionalErrorSubstring))
         return false;
     }
-    pr("*** Error:", sc.systemErr());
-    pr("***");
-    pr("*** Do you not have access to the S3 account?");
-    pr("***");
+    if (!mFirstErrorReportFlag) {
+      mFirstErrorReportFlag = true;
+      pr("*** Error:", sc.systemErr());
+      pr("***");
+      pr("*** Do you not have access to the S3 account?");
+      pr("*** Or it might be that the network connection is flaky.");
+      pr("***");
+    }
     throw FileException.withMessage(sc.systemErr());
   }
 
@@ -116,7 +120,7 @@ public class S3Archive extends ArchiveDevice {
 
     if (destination.isDirectory())
       destination = new File(destination, name);
-   
+
     SystemCall sc = s3APICall();
     sc.arg("get-object");
     sc.arg("--bucket", mBareBucket);
@@ -179,4 +183,5 @@ public class S3Archive extends ArchiveDevice {
   private final String mSubfolderPrefix;
   private final String mBareBucket;
   private Boolean mDryRun;
+  private boolean mFirstErrorReportFlag;
 }
