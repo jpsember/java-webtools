@@ -112,7 +112,7 @@ public class HttpClientWebRequestManager extends WebRequestManager {
       httpRequest = new HttpDelete(uri);
       break;
     default:
-      throw new UnsupportedOperationException("verb not supported:" + request.getVerb());
+      throw notSupported("verb not supported:", request.getVerb());
     }
 
     int timeout = request.getTimeout();
