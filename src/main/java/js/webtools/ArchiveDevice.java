@@ -49,14 +49,14 @@ public abstract class ArchiveDevice extends BaseObject {
   public final void setSimulatedNetworkProblem(boolean flag) {
     if (mSimulatedNetworkProblem == flag)
       return;
-    pr("=== ArchiveDevice simulated network problem state changing to:", flag);
+    log("=== ArchiveDevice simulated network problem state changing to:", flag);
     mSimulatedNetworkProblem = flag;
   }
 
   public final void setWritesDisabled(boolean flag) {
     if (mWritesDisabled == flag)
       return;
-    pr("=== ArchiveDevice writes disabled changing to:", flag);
+    log("=== ArchiveDevice writes disabled changing to:", flag);
     mWritesDisabled = flag;
   }
 
