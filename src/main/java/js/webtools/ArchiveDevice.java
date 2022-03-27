@@ -1,7 +1,5 @@
 package js.webtools;
 
-import static js.base.Tools.*;
-
 import java.io.File;
 import java.util.List;
 
