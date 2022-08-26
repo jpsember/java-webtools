@@ -27,6 +27,7 @@ package js.webtools;
 import static js.base.Tools.*;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.util.List;
 
 import js.webtools.gen.CloudFileEntry;
@@ -55,6 +56,10 @@ public class S3Archive extends ArchiveDevice {
       mRootDirectory = Files.assertDirectoryExists(projectDirectoryOrNull, "root directory");
     else
       mRootDirectory = null;
+  }
+
+  public void setAWSExe(String expr) {
+    mAwsExeExpr = checkNonEmpty(expr);
   }
 
   @Override
@@ -114,6 +119,14 @@ public class S3Archive extends ArchiveDevice {
   }
 
   @Override
+  public OutputStream openForPush(String name) {
+    if (isDryRun()) {
+      return Files.NULL_DATA_OUTPUT_STREAM;
+    }
+    throw notFinished("don't know if we can write from a stream using the aws command");
+  }
+
+  @Override
   public void pull(String name, File destination) {
     if (isDryRun())
       return;
@@ -142,10 +155,16 @@ public class S3Archive extends ArchiveDevice {
     if (!nullOrEmpty(prefix))
       sc.arg("--prefix", prefix);
     checkSuccess(sc, null);
-
-    JSMap result = new JSMap(sc.systemOut());
-
     List<CloudFileEntry> fileEntryList = arrayList();
+
+    // For some stupid reason, if the subfolder doesn't exist, or is empty, it returns an empty string instead
+    // of a json map
+    //
+    String output = sc.systemOut();
+    if (output.isEmpty())
+      return fileEntryList;
+
+    JSMap result = new JSMap(output);
     JSList items = result.getList("Contents");
 
     for (JSMap m : items.asMaps()) {
@@ -168,7 +187,7 @@ public class S3Archive extends ArchiveDevice {
     sc.setVerbose(verbose());
     if (mRootDirectory != null)
       sc.directory(mRootDirectory);
-    sc.arg("aws", "s3api", "--profile", mProfileName);
+    sc.arg(mAwsExeExpr, "s3api", "--profile", mProfileName);
     return sc;
   }
 
@@ -184,4 +203,5 @@ public class S3Archive extends ArchiveDevice {
   private final String mBareBucket;
   private Boolean mDryRun;
   private boolean mFirstErrorReportFlag;
+  private String mAwsExeExpr = "aws";
 }

@@ -1,6 +1,7 @@
 package js.webtools;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.util.List;
 
 import js.base.BaseObject;
@@ -26,6 +27,11 @@ public abstract class ArchiveDevice extends BaseObject {
    *          if null or empty, uses source.getName()
    */
   public abstract void push(File source, String name);
+
+  /**
+   * Open a stream for writing a new object to the archive
+   */
+  public abstract OutputStream openForPush(String name);
 
   /**
    * Pull an object from the archive to the local machine
