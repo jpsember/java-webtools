@@ -27,7 +27,6 @@ package js.webtools;
 import static js.base.Tools.*;
 
 import java.io.File;
-import java.io.OutputStream;
 import java.util.List;
 
 import js.webtools.gen.CloudFileEntry;
@@ -116,14 +115,6 @@ public class S3Archive extends ArchiveDevice {
     sc.arg("--key", mSubfolderPrefix + name);
     sc.arg("--body", source.toString());
     checkSuccess(sc, null);
-  }
-
-  @Override
-  public OutputStream openForPush(String name) {
-    if (isDryRun()) {
-      return Files.NULL_DATA_OUTPUT_STREAM;
-    }
-    throw notFinished("don't know if we can write from a stream using the aws command");
   }
 
   @Override

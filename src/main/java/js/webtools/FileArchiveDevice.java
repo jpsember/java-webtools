@@ -27,11 +27,9 @@ package js.webtools;
 import static js.base.Tools.*;
 
 import java.io.File;
-import java.io.OutputStream;
 import java.util.List;
 
 import js.webtools.gen.CloudFileEntry;
-import js.file.FileException;
 import js.file.Files;
 
 public class FileArchiveDevice extends ArchiveDevice {
@@ -61,15 +59,6 @@ public class FileArchiveDevice extends ArchiveDevice {
     File target = fileWithinArchive(name);
     files().mkdirs(Files.parent(target));
     files().copyFile(source, target);
-  }
-
-  @Override
-  public OutputStream openForPush(String name) {
-    File target = fileWithinArchive(name);
-    if (target.exists())
-      throw FileException.withMessage("attempt to push to existing file:", target);
-    files().mkdirs(Files.parent(target));
-    return files().outputStream(target);
   }
 
   @Override
