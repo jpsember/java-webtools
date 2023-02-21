@@ -35,6 +35,7 @@ import com.sun.net.httpserver.HttpExchange;
 
 import js.base.BaseObject;
 import js.base.BasePrinter;
+import js.data.DataUtil;
 import js.file.Files;
 import js.json.*;
 import js.webtools.WebRequest.Verb;
@@ -295,7 +296,7 @@ public final class WebResponse extends BaseObject {
    * Set response to HTML content
    */
   public WebResponse setOutputHTML(String markup) {
-    setOutput("text/html", markup.getBytes());
+    setOutput("text/html", DataUtil.toByteArray(markup));
     mOutputMarkup = markup;
     return this;
   }
@@ -333,7 +334,7 @@ public final class WebResponse extends BaseObject {
     // If we don't yet have mResponseBytes, try to construct it
     if (mResponseBytes == null) {
       if (mResponseMap != null)
-        mResponseBytes = mResponseMap.prettyPrint().getBytes();
+        mResponseBytes = DataUtil.toByteArray(mResponseMap.prettyPrint());
     }
     checkState(mResponseBytes != null, "no responseBytes defined");
 
