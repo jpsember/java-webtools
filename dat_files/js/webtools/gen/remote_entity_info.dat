@@ -1,4 +1,4 @@
-enum dev.gen.OsType;
+enum js.webtools.gen.OsType;
 
 fields {
   string id;
