@@ -28,7 +28,6 @@ import static js.base.Tools.*;
 
 import java.io.File;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import js.base.BaseObject;
 import js.file.Files;
@@ -100,7 +99,7 @@ public final class EntityManager extends BaseObject {
         RemoteEntityInfo original = entry.getValue();
         RemoteEntityInfo fixed = applyDefaults(id, original, s.entityTemplate()).build();
         if (!original.equals(fixed)) {
-          log("Fixed entity:", id, INDENT, fixed);
+          log("Fixed entity:", id, INDENT, fixed, CR, "was:", CR, original);
           mRegistryModified = true;
         }
         updatedMap.put(id, fixed);
@@ -154,6 +153,9 @@ public final class EntityManager extends BaseObject {
       builder.user(template.user());
     if (Files.empty(builder.projectDir()))
       builder.projectDir(template.projectDir());
+    // Clear out the dynamic elements, which shouldn't exist (except in an older version), 
+    // as they are never written back to the registry
+    builder.port(null).url(null);
     return builder;
   }
 
@@ -181,25 +183,20 @@ public final class EntityManager extends BaseObject {
     if (mRegistryModified) {
       File file = staticEntityFile();
       log("flushing changes to static registry:", file);
-
-      // Write a copy that has dynamic elements removed
-      RemoteEntityCollection.Builder trimmed = registry().toBuilder();
-      for (Entry<String, RemoteEntityInfo> ent : registry().entityMap().entrySet()) {
-        trimmed.entityMap().put(ent.getKey(), ent.getValue().toBuilder()//
-            .url(null).port(null).build());
-      }
-      files().writePretty(file, trimmed);
+      files().writePretty(file, registry());
       mRegistryModified = false;
     }
 
-    DynamicEntityInfo dynamicCurrent = dynamicRegistry().build();
-    if (!dynamicCurrent.equals(mOriginalDynamicRegistry)) {
-      File file = dynamicEntityFile();
-      log("flushing changes to dynamic registry:", file);
-      mOriginalDynamicRegistry = dynamicCurrent;
-      files().writePretty(file, dynamicCurrent);
+    // Don't attempt to flush dynamic registry if it hasn't yet been loaded
+    if (mDynamicRegistry != null) {
+      DynamicEntityInfo dynamicCurrent = dynamicRegistry().build();
+      if (!dynamicCurrent.equals(mOriginalDynamicRegistry)) {
+        File file = dynamicEntityFile();
+        log("flushing changes to dynamic registry:", file);
+        mOriginalDynamicRegistry = dynamicCurrent;
+        files().writePretty(file, dynamicCurrent);
+      }
     }
-
   }
 
   private Files files() {
