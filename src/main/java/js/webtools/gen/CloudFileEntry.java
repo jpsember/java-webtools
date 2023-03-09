@@ -3,17 +3,7 @@ package js.webtools.gen;
 import js.data.AbstractData;
 import js.json.JSMap;
 
-/**
- * Generated Java data class (do not edit!)
- *
- * Instances of this class should be considered immutable.  A mutable copy of an instance
- * can be constructed by calling the toBuilder() method.  When clients pass instances to other
- * code, if mutation of those instances is not desired, then the client should ensure that the
- * instance is not actually a Builder (e.g. by calling build() if necessary).
- */
 public class CloudFileEntry implements AbstractData {
-
-  // Field 'getters'
 
   public String name() {
     return mName;
@@ -23,39 +13,27 @@ public class CloudFileEntry implements AbstractData {
     return mSize;
   }
 
-  /**
-   * Construct a builder from this data class object.
-   * Where appropriate, this object's values are defensively copied to mutable versions
-   */
   @Override
   public Builder toBuilder() {
     return new Builder(this);
   }
 
-  // Constants used to refer to the fields, e.g., as they appear in json maps
-
-  public static final String NAME = "name";
-  public static final String SIZE = "size";
+  protected static final String _0 = "name";
+  protected static final String _1 = "size";
 
   @Override
   public String toString() {
     return toJson().prettyPrint();
   }
 
-  /**
-   * Serialize this object to a json map
-   */
   @Override
   public JSMap toJson() {
     JSMap m = new JSMap();
-    m.put(NAME, mName);
-    m.put(SIZE, mSize);
+    m.putUnsafe(_0, mName);
+    m.putUnsafe(_1, mSize);
     return m;
   }
 
-  /**
-   * The instance is already immutable, so return unchanged
-   */
   @Override
   public CloudFileEntry build() {
     return this;
@@ -67,13 +45,10 @@ public class CloudFileEntry implements AbstractData {
   }
 
   private CloudFileEntry(JSMap m) {
-    mName = m.opt(NAME, "");
-    mSize = m.opt(SIZE, 0L);
+    mName = m.opt(_0, "");
+    mSize = m.opt(_1, 0L);
   }
 
-  /**
-   * Construct a new builder for objects of this data class
-   */
   public static Builder newBuilder() {
     return new Builder(DEFAULT_INSTANCE);
   }
@@ -128,10 +103,6 @@ public class CloudFileEntry implements AbstractData {
       return super.hashCode();
     }
 
-    /**
-     * Create an immutable version of this builder.  Where appropriate, defensive, immutable copies
-     * are made of the builder fields.
-     */
     @Override
     public CloudFileEntry build() {
       CloudFileEntry r = new CloudFileEntry();
@@ -139,8 +110,6 @@ public class CloudFileEntry implements AbstractData {
       r.mSize = mSize;
       return r;
     }
-
-    // Field 'setters'.  Where appropriate, if an argument is immutable, a mutable copy is stored instead
 
     public Builder name(String x) {
       mName = (x == null) ? "" : x;
@@ -154,14 +123,8 @@ public class CloudFileEntry implements AbstractData {
 
   }
 
-  /**
-   * The default (immutable) instance of this data object
-   */
   public static final CloudFileEntry DEFAULT_INSTANCE = new CloudFileEntry();
 
-  /**
-   * The private constructor.  To create new instances, use newBuilder()
-   */
   private CloudFileEntry() {
     mName = "";
   }

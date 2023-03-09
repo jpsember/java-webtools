@@ -28,9 +28,11 @@ import static js.base.Tools.*;
 
 import java.io.File;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import js.base.BaseObject;
 import js.file.Files;
+import js.webtools.gen.DynamicEntityInfo;
 import js.webtools.gen.OsType;
 import js.webtools.gen.RemoteEntityCollection;
 import js.webtools.gen.RemoteEntityInfo;
@@ -48,15 +50,11 @@ import js.webtools.gen.RemoteEntityInfo;
  * 
  * Dynamic registry
  * =================
- * This is a RemoteEntityCollection that mirrors the static registry, except
- * that it also contains the ngrok port and url for the entities (which may be
- * out of date), as well as the 'active' entity id. It is not to be tracked by
- * git. The EntityManager frequently will update this registry, to make sure it
- * mirrors the static registry (subject to the noted exceptions).
+ * This contains the 'active' entity id. It is not to be tracked by git.
  * 
  * </pre>
  */
-public class  EntityManager extends BaseObject {
+public final class EntityManager extends BaseObject {
 
   public static EntityManager sharedInstance() {
     if (sSharedInstance == null)
@@ -65,6 +63,10 @@ public class  EntityManager extends BaseObject {
   }
 
   private static EntityManager sSharedInstance;
+
+  public EntityManager() {
+    updateVerbose();
+  }
 
   //------------------------------------------------------------------
   // Supplying Files object, to support dryrun operation
@@ -78,103 +80,68 @@ public class  EntityManager extends BaseObject {
     return this;
   }
 
-  /**
-   * Get an immutable copy of the current (dynamic) entities
-   */
-  public RemoteEntityCollection currentEntities() {
-    return dynamicRegistry().build();
-  }
-
-  public RemoteEntityInfo optionalActiveEntity() {
-    return entryFor(dynamicRegistry().activeEntity());
-  }
-
-  /**
-   * Get RemoteEntryInfo for a particular key. Return default entity if key is
-   * null or empty
-   */
-  public RemoteEntityInfo entryFor(String key) {
-    RemoteEntityInfo ent = optionalEntryFor(key);
-    if (!nullOrEmpty(key) && ent == null)
-      throw badState("No entity found for key:", key);
+  public RemoteEntityInfo entity(String id) {
+    checkArgument(nonEmpty(id));
+    RemoteEntityInfo ent = registry().entityMap().get(id);
     return ent;
   }
 
-  public RemoteEntityInfo optionalEntryFor(String key) {
-    RemoteEntityInfo ent = null;
-    if (!nullOrEmpty(key))
-      ent = dynamicRegistry().entityMap().get(key);
-    return ent;
+  public RemoteEntityCollection registry() {
+    if (mRegistry == null) {
+      log("reading registry");
+      RemoteEntityCollection s = Files.parseAbstractData(RemoteEntityCollection.DEFAULT_INSTANCE,
+          staticEntityFile());
+
+      // Process the entries, applying any fixes; e.g. mismatched id, missing
+      // default values
+      Map<String, RemoteEntityInfo> updatedMap = hashMap();
+      for (Map.Entry<String, RemoteEntityInfo> entry : s.entityMap().entrySet()) {
+        String id = entry.getKey();
+        RemoteEntityInfo original = entry.getValue();
+        RemoteEntityInfo fixed = applyDefaults(id, original, s.entityTemplate()).build();
+        if (!original.equals(fixed)) {
+          log("Fixed entity:", id, INDENT, fixed);
+          mRegistryModified = true;
+        }
+        updatedMap.put(id, fixed);
+      }
+      mRegistry = s.toBuilder().entityMap(updatedMap).build();
+    }
+    return mRegistry;
+  }
+
+  public String activeEntityId() {
+    return dynamicRegistry().activeEntity();
   }
 
   public RemoteEntityInfo activeEntity() {
-    RemoteEntityInfo ent = optionalActiveEntity();
-    if (ent == RemoteEntityInfo.DEFAULT_INSTANCE)
-      throw badState("No active remote entity");
-    return ent;
+    String activeId = dynamicRegistry().activeEntity();
+    RemoteEntityInfo info = entity(activeId);
+    if (info == null)
+      throw badState("Empty or missing active remote entity:", activeId);
+    return info;
   }
 
   public void setActive(String key) {
-    if (!dynamicRegistry().entityMap().containsKey(key))
+    if (entity(key) == null)
       throw badArg("entity not found:", key);
     dynamicRegistry().activeEntity(key);
     flushChanges();
   }
 
   public void create(RemoteEntityInfo info) {
+    log("create", INDENT, info);
     checkArgument(!info.id().isEmpty(), "invalid id:", INDENT, info);
-    if (staticRegistry().entityMap().containsKey(info.id()))
+    if (entity(info.id()) != null)
       throw badArg("entity already exists:", info.id());
-    RemoteEntityInfo modified = applyDefaults(info.id(), info, staticRegistry().entityTemplate());
-    staticRegistry().entityMap().put(info.id(), clearDynamicFields(modified));
-    dynamicRegistry().entityMap().put(info.id(), modified);
+    RemoteEntityInfo modified = applyDefaults(info.id(), info, registry().entityTemplate());
+
+    Map<String, RemoteEntityInfo> newMap = hashMap();
+    newMap.putAll(registry().entityMap());
+    newMap.put(info.id(), modified);
+    mRegistry = mRegistry.toBuilder().entityMap(newMap).build();
+    mRegistryModified = true;
     flushChanges();
-  }
-
-  /**
-   * Store updated version of entity
-   */
-  public RemoteEntityInfo updateEnt(RemoteEntityInfo entity) {
-    log("updateEnt:", entity.id());
-    checkArgument(!entity.id().isEmpty(), "missing id:", INDENT, entity);
-
-    // Construct template to fetch missing values from.
-    // Use the current dynamic version of the entity, or the default template if none yet exists
-    //
-    RemoteEntityInfo template = dynamicRegistry().entityMap().get(entity.id());
-    boolean added = (template == null);
-    if (added) {
-      template = staticRegistry().entityTemplate().toBuilder().id(entity.id());
-    }
-
-    // Apply defaults from this template
-    //
-    entity = applyDefaults(entity.id(), entity, template).build();
-
-    // If hidden entity already exists and is not changed, we don't need to continue
-    //
-    RemoteEntityInfo prevOrNull = dynamicRegistry().entityMap().get(entity.id());
-    if (entity.equals(prevOrNull)) {
-      log("...no changes");
-    } else {
-      log("...storing", added ? "new" : "modified", "entity:", INDENT, entity);
-      dynamicRegistry().entityMap().put(entity.id(), entity);
-      // Store appropriate version within static register
-      RemoteEntityInfo staticVersion = clearDynamicFields(entity).build();
-      log("...storing static version:", INDENT, staticVersion);
-      staticRegistry().entityMap().put(entity.id(), staticVersion);
-      // Flush changes to both static and dynamic registers
-      flushChanges();
-    }
-    return entity;
-  }
-
-  /**
-   * Clear those fields of an entity that are associated with the hidden
-   * register: port, url
-   */
-  private RemoteEntityInfo.Builder clearDynamicFields(RemoteEntityInfo entity) {
-    return entity.toBuilder().port(0).url(null);
   }
 
   private RemoteEntityInfo.Builder applyDefaults(String id, RemoteEntityInfo entity,
@@ -201,152 +168,48 @@ public class  EntityManager extends BaseObject {
     return files().fileWithinProjectConfigDirectory(STATIC_REGISTRY_NAME);
   }
 
-  private RemoteEntityCollection.Builder staticRegistry() {
-    dynamicRegistry();
-    return mStaticRegistry;
-  }
-
-  private RemoteEntityCollection.Builder dynamicRegistry() {
+  private DynamicEntityInfo.Builder dynamicRegistry() {
     if (mDynamicRegistry == null) {
-      checkState(!mNestedCallFlag);
-      mNestedCallFlag = true;
-
-      // We must read both registers before attempting any edits, so that the
-      // instance fields are initialized
-      //
-      readStaticRegister();
-      readDynamicRegister();
-
-      fixStaticRegistry();
-      fixDynamicEntries();
-
-      // Flush any changes immediately, in case client isn't going to make any changes
-      flushChanges();
-      mNestedCallFlag = false;
+      mOriginalDynamicRegistry = Files.parseAbstractDataOpt(DynamicEntityInfo.DEFAULT_INSTANCE,
+          dynamicEntityFile());
+      mDynamicRegistry = mOriginalDynamicRegistry.toBuilder();
     }
     return mDynamicRegistry;
   }
 
-  private void readDynamicRegister() {
-    mOriginalDynamicRegistry = Files.parseAbstractDataOpt(RemoteEntityCollection.DEFAULT_INSTANCE,
-        dynamicEntityFile());
-    mDynamicRegistry = mOriginalDynamicRegistry.toBuilder();
-  }
-
-  private void readStaticRegister() {
-    mOriginalStaticRegistry = Files.parseAbstractData(RemoteEntityCollection.DEFAULT_INSTANCE,
-        staticEntityFile());
-    mStaticRegistry = mOriginalStaticRegistry.toBuilder();
-  }
-
-  /**
-   * Process the static entries, applying any fixes; e.g. mismatched id, missing
-   * default values
-   */
-  private void fixStaticRegistry() {
-    Map<String, RemoteEntityInfo> updatedMap = hashMap();
-    for (Map.Entry<String, RemoteEntityInfo> entry : staticRegistry().entityMap().entrySet()) {
-      String id = entry.getKey();
-      RemoteEntityInfo original = entry.getValue();
-      RemoteEntityInfo fixed = applyDefaults(id, original, mStaticRegistry.entityTemplate()).build();
-      if (verbose() && !original.equals(fixed))
-        log("Fixed entity:", id, INDENT, fixed);
-      updatedMap.put(id, fixed);
-    }
-    staticRegistry().entityMap(updatedMap);
-  }
-
-  /**
-   * Update all dynamic entries to agree with their static counterparts, adding
-   * any that are missing
-   */
-  private void fixDynamicEntries() {
-    Map<String, RemoteEntityInfo> updatedMap = hashMap();
-
-    for (Map.Entry<String, RemoteEntityInfo> entry : mStaticRegistry.entityMap().entrySet()) {
-      String id = entry.getKey();
-      RemoteEntityInfo source = entry.getValue();
-
-      RemoteEntityInfo origTarget = dynamicRegistry().entityMap().get(id);
-      RemoteEntityInfo logOriginal = origTarget;
-
-      if (origTarget == null) {
-        log("Adding missing hidden entity:", id);
-        origTarget = RemoteEntityInfo.DEFAULT_INSTANCE;
-      }
-
-      RemoteEntityInfo.Builder b = source.toBuilder();
-
-      b.port(origTarget.port());
-      b.url(origTarget.url());
-      RemoteEntityInfo updatedTarget = b.build();
-      if (verbose() && !origTarget.equals(updatedTarget)) {
-        log("Fixing dynamic entity to agree with static; was:", INDENT, logOriginal, OUTDENT, "now:", INDENT,
-            updatedTarget);
-      }
-      updatedMap.put(id, updatedTarget);
-    }
-    dynamicRegistry().entityMap(updatedMap);
-
-    String activeId = dynamicRegistry().activeEntity();
-    if (!nullOrEmpty(activeId)) {
-      if (optionalEntryFor(activeId) == null) {
-        log("Active entity doesn't exist, clearing:", activeId);
-        dynamicRegistry().activeEntity(null);
-      }
-    }
-  }
-
   private void flushChanges() {
-    RemoteEntityCollection updated;
-
-    updated = dynamicRegistry().build();
-
-    if (!updated.equals(mOriginalDynamicRegistry)) {
-      File file = dynamicEntityFile();
-      log("...flushing (dynamic) changes to:", file);
-      mOriginalDynamicRegistry = dynamicRegistry().build();
-      files().writePretty(file, mOriginalDynamicRegistry);
-    }
-
-    updateStaticEntityList();
-
-    updated = staticRegistry().build();
-    if (!updated.equals(mOriginalStaticRegistry)) {
+    if (mRegistryModified) {
       File file = staticEntityFile();
-      log("...flushing (static) changes to:", file);
-      mOriginalStaticRegistry = updated;
-      files().writePretty(file, updated);
-    }
-  }
+      log("flushing changes to static registry:", file);
 
-  // Copy all the dynamic entities to the static map, after removing dynamic fields
-  private void updateStaticEntityList() {
-    Map<String, RemoteEntityInfo> modified;
-    modified = hashMap();
-    for (RemoteEntityInfo ent : dynamicRegistry().entityMap().values()) {
-      modified.put(ent.id(), clearDynamicFields(ent)//
-          .port(0) //
-          .url(null) //
-          .build());
+      // Write a copy that has dynamic elements removed
+      RemoteEntityCollection.Builder trimmed = registry().toBuilder();
+      for (Entry<String, RemoteEntityInfo> ent : registry().entityMap().entrySet()) {
+        trimmed.entityMap().put(ent.getKey(), ent.getValue().toBuilder()//
+            .url(null).port(null).build());
+      }
+      files().writePretty(file, trimmed);
+      mRegistryModified = false;
     }
-    staticRegistry().entityMap(modified);
+
+    DynamicEntityInfo dynamicCurrent = dynamicRegistry().build();
+    if (!dynamicCurrent.equals(mOriginalDynamicRegistry)) {
+      File file = dynamicEntityFile();
+      log("flushing changes to dynamic registry:", file);
+      mOriginalDynamicRegistry = dynamicCurrent;
+      files().writePretty(file, dynamicCurrent);
+    }
+
   }
 
   private Files files() {
     return mFiles;
   }
 
-  private RemoteEntityCollection mOriginalDynamicRegistry;
-  private RemoteEntityCollection mOriginalStaticRegistry;
-  private RemoteEntityCollection.Builder mDynamicRegistry;
-  private RemoteEntityCollection.Builder mStaticRegistry;
-
-  // For ensuring we aren't making nested calls to the method that loads and 
-  // 'fixes up' the registers
-  //
-  private boolean mNestedCallFlag;
-
+  private RemoteEntityCollection mRegistry;
+  private boolean mRegistryModified;
+  private DynamicEntityInfo mOriginalDynamicRegistry;
+  private DynamicEntityInfo.Builder mDynamicRegistry;
   private Files mFiles = Files.S;
 
 }

@@ -78,6 +78,8 @@ public class Ngrok extends BaseObject {
    * Get map of entity tags => RemoteEntityInfo
    */
   public Map<String, RemoteEntityInfo> remoteEntityInfoMap() {
+    todo(
+        "refactor so this is thread safe, perhaps updated periodically from network thread? Or, only when problem occurs?");
     if (mTunnelMap == null) {
       updateVerbose();
       Map<String, RemoteEntityInfo> newMap = treeMap();
@@ -120,21 +122,17 @@ public class Ngrok extends BaseObject {
 
   /**
    * Given a 'static' RemoteEntityInfo, return a copy that has the ngrok's
-   * tunnel and port fields filled in; or the original if no ngrok information
-   * exists
+   * tunnel and port fields filled in; or null if no ngrok information exists
    */
-  public RemoteEntityInfo updateEntityDynamicFields(RemoteEntityInfo entity) {
-    RemoteEntityInfo.Builder b = entity.build().toBuilder();
-    // Clear the dynamic fields, so that we don't use stale values if they are unavailable
-    b.url(null).port(0);
+  public RemoteEntityInfo addNgrokInfo(RemoteEntityInfo entity) {
+    todo(
+        "refactor so this is thread safe, perhaps updated periodically from network thread? Or, only when problem occurs?");
     RemoteEntityInfo tunnel = remoteEntityInfoMap().get(entity.id());
     if (tunnel == null) {
       log("*** no ngrok tunnel found for entity:", entity.id());
-    } else {
-      b.url(tunnel.url());
-      b.port(tunnel.port());
+      return null;
     }
-    return b.build();
+    return entity.build().toBuilder().url(tunnel.url()).port(tunnel.port()).build();
   }
 
   private Map<String, RemoteEntityInfo> mTunnelMap;

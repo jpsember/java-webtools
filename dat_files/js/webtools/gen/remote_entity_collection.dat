@@ -1,6 +1,5 @@
 fields {
   map string RemoteEntityInfo entity_map;
-  string active_entity;
 
   // default values for any missing fields for new entities
   //
