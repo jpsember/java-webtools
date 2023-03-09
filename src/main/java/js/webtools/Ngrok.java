@@ -69,8 +69,6 @@ public class Ngrok extends BaseObject {
    * Get map of entity tags => RemoteEntityInfo
    */
   public Map<String, RemoteEntityInfo> remoteEntityInfoMap() {
-    todo(
-        "refactor so this is thread safe, perhaps updated periodically from network thread? Or, only when problem occurs?");
     if (mTunnelMap == null) {
       updateVerbose();
       Map<String, RemoteEntityInfo> newMap = treeMap();
@@ -116,8 +114,6 @@ public class Ngrok extends BaseObject {
    * tunnel and port fields filled in; or null if no ngrok information exists
    */
   public RemoteEntityInfo addNgrokInfo(RemoteEntityInfo entity) {
-    todo(
-        "refactor so this is thread safe, perhaps updated periodically from network thread? Or, only when problem occurs?");
     RemoteEntityInfo tunnel = remoteEntityInfoMap().get(entity.id());
     if (tunnel == null) {
       log("*** no ngrok tunnel found for entity:", entity.id());
