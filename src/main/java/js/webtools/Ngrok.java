@@ -40,15 +40,6 @@ import js.webtools.gen.RemoteEntityInfo;
 
 public class Ngrok extends BaseObject {
 
-  public static Ngrok sharedInstance() {
-    if (sSharedInstance == null) {
-      sSharedInstance = new Ngrok();
-    }
-    return sSharedInstance;
-  }
-
-  private static Ngrok sSharedInstance;
-
   /**
    * Call the ngrok API, with a particular endpoint appended to their url.
    */
