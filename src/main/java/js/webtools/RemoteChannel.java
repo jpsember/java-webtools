@@ -17,6 +17,7 @@ import com.jcraft.jsch.ChannelSftp.LsEntrySelector;
 
 import js.base.BaseObject;
 import js.base.DateTimeTools;
+import js.data.AbstractData;
 import js.data.DataUtil;
 import js.file.Files;
 import js.webtools.gen.RemoteEntityInfo;
@@ -109,6 +110,10 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
     } catch (SftpException t) {
       throw Files.asFileException(t);
     }
+  }
+
+  public void writeFileAtomically(AbstractData data, File remoteTargetFile) {
+    writeFileAtomically(DataUtil.toByteArray(data), remoteTargetFile);
   }
 
   /**
