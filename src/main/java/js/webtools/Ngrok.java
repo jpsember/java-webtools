@@ -38,14 +38,34 @@ import js.json.JSMap;
 import js.parsing.RegExp;
 import js.webtools.gen.RemoteEntityInfo;
 
+/**
+ * This class is threadsafe
+ */
 public class Ngrok extends BaseObject {
+
+  // ------------------------------------------------------------------
+  // Singleton implementation
+  // ------------------------------------------------------------------
+
+  public static Ngrok sharedInstance() {
+    if (sSharedInstance == null) {
+      sSharedInstance = new Ngrok();
+    }
+    return sSharedInstance;
+  }
+
+  private static Ngrok sSharedInstance;
+
+  private Ngrok() {
+  }
+  
+  // ------------------------------------------------------------------
 
   /**
    * Request a refresh of the entity information read from ngrok
    */
   public Ngrok refresh() {
-    mCachedTunnels = null;
-    mTunnelMap = null;
+    mRequestRefresh = true;
     return this;
   }
 
@@ -53,9 +73,11 @@ public class Ngrok extends BaseObject {
    * Given a RemoteEntityInfo, return a copy that has the ngrok's tunnel and
    * port fields filled in; or null if no ngrok information exists
    */
-  public RemoteEntityInfo addNgrokInfo(RemoteEntityInfo entity) {
+  public RemoteEntityInfo addNgrokInfo(RemoteEntityInfo entity, boolean mustExist) {
     RemoteEntityInfo tunnel = remoteEntityInfoMap().get(entity.id());
     if (tunnel == null) {
+      if (mustExist)
+        throw badArg("no ngrok tunnel found for entity:", entity.id());
       log("*** no ngrok tunnel found for entity:", entity.id());
       return null;
     }
@@ -66,42 +88,45 @@ public class Ngrok extends BaseObject {
    * Get map of entity tags => RemoteEntityInfo
    */
   private Map<String, RemoteEntityInfo> remoteEntityInfoMap() {
-    if (mTunnelMap == null) {
-      updateVerbose();
-      Map<String, RemoteEntityInfo> newMap = treeMap();
-      for (JSMap tunMap : ngrokTunnelMap().asMaps()) {
-        String metadata = tunMap.opt("metadata", "");
-        if (metadata.isEmpty()) {
-          // If this is not a tcp tunnel, ignore
-          if (!tunMap.get("proto").equals("tcp"))
+    updateVerbose();
+    if (mRequestRefresh || mTunnelMap == null) {
+      synchronized (this) {
+        Map<String, RemoteEntityInfo> newMap = treeMap();
+        JSList tunnelList = ngrokTunnelMap();
+        for (JSMap tunMap : tunnelList.asMaps()) {
+          String metadata = tunMap.opt("metadata", "");
+          if (metadata.isEmpty()) {
+            // If this is not a tcp tunnel, ignore
+            if (!tunMap.get("proto").equals("tcp"))
+              continue;
+          }
+          if (metadata.isEmpty()) {
+            pr("*** ngrok tunnel has no metadata, public_url:", tunMap.get("public_url"), "tunnel map:",
+                INDENT, tunMap);
             continue;
-        }
-        if (metadata.isEmpty()) {
-          pr("*** ngrok tunnel has no metadata, public_url:", tunMap.get("public_url"), "tunnel map:", INDENT,
-              tunMap);
-          continue;
-        }
+          }
 
-        if (newMap.containsKey(metadata)) {
-          pr("*** multiple tunnels sharing same metadata:", metadata);
-          continue;
-        }
+          if (newMap.containsKey(metadata)) {
+            pr("*** multiple tunnels sharing same metadata:", metadata);
+            continue;
+          }
 
-        String publicUrl = tunMap.get("public_url");
-        chompPrefix(publicUrl, "tcp://");
-        Matcher matcher = RegExp.matcher("tcp:\\/\\/(.+):(\\d+)", publicUrl);
-        if (!matcher.matches()) {
-          pr("*** failed to parse public_url:", publicUrl);
-          continue;
+          String publicUrl = tunMap.get("public_url");
+          chompPrefix(publicUrl, "tcp://");
+          Matcher matcher = RegExp.matcher("tcp:\\/\\/(.+):(\\d+)", publicUrl);
+          if (!matcher.matches()) {
+            pr("*** failed to parse public_url:", publicUrl);
+            continue;
+          }
+          RemoteEntityInfo result = RemoteEntityInfo.newBuilder()//
+              .url(matcher.group(1)) //
+              .port(Integer.parseInt(matcher.group(2)))//
+              .build();
+          log("parsed public url:", publicUrl, CR, "to entity info:", INDENT, result);
+          newMap.put(metadata, result);
         }
-        RemoteEntityInfo result = RemoteEntityInfo.newBuilder()//
-            .url(matcher.group(1)) //
-            .port(Integer.parseInt(matcher.group(2)))//
-            .build();
-        log("parsed public url:", publicUrl, CR, "to entity info:", INDENT, result);
-        newMap.put(metadata, result);
+        mTunnelMap = newMap;
       }
-      mTunnelMap = newMap;
     }
     return mTunnelMap;
   }
@@ -132,18 +157,15 @@ public class Ngrok extends BaseObject {
   }
 
   private JSList ngrokTunnelMap() {
-    if (mCachedTunnels == null) {
-      updateVerbose();
-      JSMap apiResult = callAPI("tunnels");
-      log("Called api:", INDENT, apiResult);
-      mCachedTunnels = apiResult.getList("tunnels");
-      log("tunnels:", INDENT, mCachedTunnels);
-    }
-    return mCachedTunnels;
+    JSMap apiResult = callAPI("tunnels");
+    log("Called api:", INDENT, apiResult);
+    JSList result = apiResult.getList("tunnels");
+    log("tunnels:", INDENT, result);
+    return result;
   }
 
+  private boolean mRequestRefresh;
   private Map<String, RemoteEntityInfo> mTunnelMap;
-  private JSList mCachedTunnels;
   private String mToken;
 
 }
