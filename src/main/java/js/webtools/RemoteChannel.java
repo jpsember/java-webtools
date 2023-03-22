@@ -122,7 +122,11 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
   public byte[] readFile(File remoteFile) {
     ByteArrayOutputStream os = new ByteArrayOutputStream((int) DataUtil.ONE_KB);
     try {
+      if (verbose())
+        checkpoint("readFile");
       channelSftp().get(remoteFile.toString(), os);
+      if (verbose())
+        checkpoint("readFile done");
     } catch (SftpException e) {
       throw Files.asFileException(e);
     }
@@ -171,16 +175,35 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
         //
         //   ssh-keygen -m PEM
         //
+        // For example, this is how I generated a key on my Macbook:
+        //
+        /**
+         * <pre>
+         * 
+           .ssh] ssh-keygen -m PEM
+            Generating public/private rsa key pair.
+            Enter file in which to save the key (/Users/home/.ssh/id_rsa): eiodashboard
+            Enter passphrase (empty for no passphrase): 
+            Enter same passphrase again: 
+            Your identification has been saved in eiodashboard.
+            Your public key has been saved in eiodashboard.pub.
+         * 
+         * </pre>
+         */
 
         jsch.addIdentity(privateKey.toString());
         Session session = jsch.getSession(username, host, port);
 
         session.setConfig("StrictHostKeyChecking", "no");
 
-        checkpoint("connecting");
-
+        todo("add some optional timing info");
+        log("connecting");
+        if (verbose())
+          checkpoint("connecting");
         session.connect();
-        checkpoint("connected");
+        if (verbose())
+          checkpoint("connected");
+        log("connected");
         mSession = session;
       } catch (Throwable e) {
         String msg = e.getMessage();
@@ -209,7 +232,6 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
   private EntityManager mEntityManager;
   private Session mSession;
   private ChannelSftp mChannelSftp;
-
   private String mPrivateKeyFilename = "id_rsa";
   private String mEntityId;
 
