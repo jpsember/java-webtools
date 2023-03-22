@@ -41,34 +41,31 @@ import js.webtools.gen.RemoteEntityInfo;
 public class Ngrok extends BaseObject {
 
   /**
-   * Call the ngrok API, with a particular endpoint appended to their url.
+   * Request a refresh of the entity information read from ngrok
    */
-  private JSMap callAPI(String endpoint) {
-    SystemCall sc = new SystemCall();
-    sc.setVerbose(verbose());
-    sc.arg("curl", "-sS");
-    sc.arg("-H", "Accept: application/json");
-    sc.arg("-H", "Authorization: Bearer " + getNgrokToken());
-    sc.arg("-H", "ngrok-version: 2");
-    sc.arg("https://api.ngrok.com/" + endpoint);
-    sc.assertSuccess();
-    JSMap result = new JSMap(sc.systemOut());
-    return result;
-  }
-
-  /**
-   * Discard any cached tunnels that may have previously been read
-   */
-  public Ngrok discardTunnels() {
+  public Ngrok refresh() {
     mCachedTunnels = null;
     mTunnelMap = null;
     return this;
   }
 
   /**
+   * Given a RemoteEntityInfo, return a copy that has the ngrok's tunnel and
+   * port fields filled in; or null if no ngrok information exists
+   */
+  public RemoteEntityInfo addNgrokInfo(RemoteEntityInfo entity) {
+    RemoteEntityInfo tunnel = remoteEntityInfoMap().get(entity.id());
+    if (tunnel == null) {
+      log("*** no ngrok tunnel found for entity:", entity.id());
+      return null;
+    }
+    return entity.build().toBuilder().url(tunnel.url()).port(tunnel.port()).build();
+  }
+
+  /**
    * Get map of entity tags => RemoteEntityInfo
    */
-  public Map<String, RemoteEntityInfo> remoteEntityInfoMap() {
+  private Map<String, RemoteEntityInfo> remoteEntityInfoMap() {
     if (mTunnelMap == null) {
       updateVerbose();
       Map<String, RemoteEntityInfo> newMap = treeMap();
@@ -110,19 +107,20 @@ public class Ngrok extends BaseObject {
   }
 
   /**
-   * Given a 'static' RemoteEntityInfo, return a copy that has the ngrok's
-   * tunnel and port fields filled in; or null if no ngrok information exists
+   * Call the ngrok API, with a particular endpoint appended to their url.
    */
-  public RemoteEntityInfo addNgrokInfo(RemoteEntityInfo entity) {
-    RemoteEntityInfo tunnel = remoteEntityInfoMap().get(entity.id());
-    if (tunnel == null) {
-      log("*** no ngrok tunnel found for entity:", entity.id());
-      return null;
-    }
-    return entity.build().toBuilder().url(tunnel.url()).port(tunnel.port()).build();
+  private JSMap callAPI(String endpoint) {
+    SystemCall sc = new SystemCall();
+    sc.setVerbose(verbose());
+    sc.arg("curl", "-sS");
+    sc.arg("-H", "Accept: application/json");
+    sc.arg("-H", "Authorization: Bearer " + getNgrokToken());
+    sc.arg("-H", "ngrok-version: 2");
+    sc.arg("https://api.ngrok.com/" + endpoint);
+    sc.assertSuccess();
+    JSMap result = new JSMap(sc.systemOut());
+    return result;
   }
-
-  private Map<String, RemoteEntityInfo> mTunnelMap;
 
   private String getNgrokToken() {
     if (mToken == null) {
@@ -144,8 +142,8 @@ public class Ngrok extends BaseObject {
     return mCachedTunnels;
   }
 
+  private Map<String, RemoteEntityInfo> mTunnelMap;
   private JSList mCachedTunnels;
-
   private String mToken;
 
 }
