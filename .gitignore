@@ -23,6 +23,8 @@ _SKIP_*
 .settings
 eclipse_preferences.epf
 
+.jsproject
+
 src/main/java/js/webtools/gen
 
 # Compile output

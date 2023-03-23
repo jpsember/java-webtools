@@ -34,6 +34,11 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
     return this;
   }
 
+  public RemoteChannel withHomeDirectory(File homeDir) {
+    mHomeDirectory = Files.assertExists(Files.assertAbsolute(homeDir));
+    return this;
+  }
+
   @Override
   public void close() {
     if (mChannelSftp != null) {
@@ -156,7 +161,7 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
       try {
         JSch jsch = new JSch();
 
-        File sshDir = new File(Files.homeDirectory(), ".ssh");
+        File sshDir = new File(homeDirectory(), ".ssh");
         File privateKey = Files.assertExists(new File(sshDir, mPrivateKeyFilename), "private_key_filename");
 
         mEntityManager = EntityManager.sharedInstance();
@@ -229,6 +234,13 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
     return mChannelSftp;
   }
 
+  private File homeDirectory() {
+    if (mHomeDirectory == null)
+      mHomeDirectory = Files.homeDirectory();
+    return mHomeDirectory;
+  }
+
+  private File mHomeDirectory;
   private EntityManager mEntityManager;
   private Session mSession;
   private ChannelSftp mChannelSftp;
