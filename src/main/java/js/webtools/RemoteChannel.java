@@ -29,8 +29,8 @@ import js.webtools.gen.RemoteEntityInfo;
 
 public class RemoteChannel extends BaseObject implements AutoCloseable {
 
-  public RemoteChannel withPrivateKey(String privateKeyFilename) {
-    mPrivateKeyFilename = checkNonEmpty(privateKeyFilename);
+  public RemoteChannel withPrivateKeyFile(File privateKeyFile) {
+    mPrivateKeyFile = Files.assertExists(privateKeyFile, "private_key_file");
     return this;
   }
 
@@ -212,11 +212,6 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
 
       try {
         JSch jsch = new JSch();
-
-        // We want the caller's home directory, not the remote device's
-        File sshDir = new File(Files.homeDirectory(), ".ssh");
-        File privateKey = Files.assertExists(new File(sshDir, mPrivateKeyFilename), "private_key_filename");
-
         mEntityManager = EntityManager.sharedInstance();
 
         RemoteEntityInfo markerEntity = mEntityManager.entity(mEntityId);
@@ -249,7 +244,7 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
          * </pre>
          */
 
-        jsch.addIdentity(privateKey.toString());
+        jsch.addIdentity(mPrivateKeyFile.toString());
         Session session = jsch.getSession(username, host, port);
 
         session.setConfig("StrictHostKeyChecking", "no");
@@ -304,7 +299,7 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
   private Session mSession;
   private ChannelSftp mChannelSftp;
   private ChannelExec mChannelExec;
-  private String mPrivateKeyFilename = "id_rsa";
+  private File mPrivateKeyFile;
   private String mEntityId;
 
 }
