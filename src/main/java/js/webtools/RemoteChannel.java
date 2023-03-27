@@ -2,11 +2,16 @@ package js.webtools;
 
 import static js.base.Tools.*;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.List;
 
+import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
@@ -34,11 +39,6 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
     return this;
   }
 
-  public RemoteChannel withHomeDirectory(File homeDir) {
-    mHomeDirectory = Files.assertExists(Files.assertAbsolute(homeDir));
-    return this;
-  }
-
   @Override
   public void close() {
     if (mChannelSftp != null) {
@@ -57,6 +57,58 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
       mSession = null;
     }
   }
+
+  // ------------------------------------------------------------------
+  // Executing commands on remote machine (untested!)
+  // ------------------------------------------------------------------
+
+  public RemoteChannel execute(String command) {
+    mCommandStdOut = null;
+    mCommandStdErr = null;
+    ChannelExec c = channelExec();
+    c.setCommand(command);
+    try {
+      InputStream inp = c.getInputStream();
+      InputStream err = c.getErrStream();
+      c.connect();
+
+      mCommandStdOut = readRemoteText(inp);
+      mCommandStdErr = readRemoteText(err);
+
+      c.disconnect();
+    } catch (Throwable e) {
+      throw Files.asFileException(e);
+    }
+    return this;
+  }
+
+  public String stdOut() {
+    checkNotNull(mCommandStdOut, "no command executed");
+    return mCommandStdOut;
+  }
+
+  public String stdErr() {
+    checkNotNull(mCommandStdErr, "no command executed");
+    return mCommandStdErr;
+  }
+
+  private String readRemoteText(InputStream inp) {
+    StringBuilder outputText = new StringBuilder();
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(inp))) {
+      for (String line = br.readLine(); line != null; line = br.readLine()) {
+        outputText.append(line);
+        outputText.append('\n');
+      }
+    } catch (IOException e) {
+      throw Files.asFileException(e);
+    }
+    return outputText.toString();
+  }
+
+  private String mCommandStdOut;
+  private String mCommandStdErr;
+
+  // ------------------------------------------------------------------
 
   public List<String> getDirectoryContents(File remoteDirectory, String extensionOrNull) {
     String suffix = null;
@@ -161,7 +213,8 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
       try {
         JSch jsch = new JSch();
 
-        File sshDir = new File(homeDirectory(), ".ssh");
+        // We want the caller's home directory, not the remote device's
+        File sshDir = new File(Files.homeDirectory(), ".ssh");
         File privateKey = Files.assertExists(new File(sshDir, mPrivateKeyFilename), "private_key_filename");
 
         mEntityManager = EntityManager.sharedInstance();
@@ -234,16 +287,23 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
     return mChannelSftp;
   }
 
-  private File homeDirectory() {
-    if (mHomeDirectory == null)
-      mHomeDirectory = Files.homeDirectory();
-    return mHomeDirectory;
+  private ChannelExec channelExec() {
+    if (mChannelExec == null) {
+      try {
+        mChannelExec = (ChannelExec) session().openChannel("exec");
+        // Set a 5 second timeout
+        mChannelExec.connect((int) DateTimeTools.SECONDS(5));
+      } catch (JSchException e) {
+        throw Files.asFileException(e);
+      }
+    }
+    return mChannelExec;
   }
 
-  private File mHomeDirectory;
   private EntityManager mEntityManager;
   private Session mSession;
   private ChannelSftp mChannelSftp;
+  private ChannelExec mChannelExec;
   private String mPrivateKeyFilename = "id_rsa";
   private String mEntityId;
 
