@@ -24,6 +24,7 @@ import js.base.BaseObject;
 import js.base.DateTimeTools;
 import js.data.AbstractData;
 import js.data.DataUtil;
+import js.file.FileException;
 import js.file.Files;
 import js.webtools.gen.RemoteEntityInfo;
 
@@ -185,7 +186,7 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
       if (verbose())
         checkpoint("readFile done");
     } catch (SftpException e) {
-      throw Files.asFileException(e);
+      throw FileException.withCause(e, "failed to read remoteFile:", remoteFile);
     }
     return os.toByteArray();
   }
