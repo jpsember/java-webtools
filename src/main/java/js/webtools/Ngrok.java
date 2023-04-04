@@ -156,7 +156,7 @@ public class Ngrok extends BaseObject {
     return mToken;
   }
 
-  private JSList ngrokTunnelMap() {
+  public JSList ngrokTunnelMap() {
     JSMap apiResult = callAPI("tunnels");
     log("Called api:", INDENT, apiResult);
     JSList result = apiResult.getList("tunnels");
