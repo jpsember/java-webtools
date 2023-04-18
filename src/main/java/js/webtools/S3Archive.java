@@ -58,7 +58,7 @@ public class S3Archive extends ArchiveDevice {
   }
 
   public void setAWSExe(String expr) {
-    mAwsExeExpr = checkNonEmpty(expr);
+    mAwsExeExpr = expr;
   }
 
   @Override
@@ -178,7 +178,7 @@ public class S3Archive extends ArchiveDevice {
     sc.setVerbose(verbose());
     if (mRootDirectory != null)
       sc.directory(mRootDirectory);
-    sc.arg(mAwsExeExpr, "s3api", "--profile", mProfileName);
+    sc.arg(ifNullOrEmpty(mAwsExeExpr, "aws"), "s3api", "--profile", mProfileName);
     return sc;
   }
 
@@ -194,5 +194,5 @@ public class S3Archive extends ArchiveDevice {
   private final String mBareBucket;
   private Boolean mDryRun;
   private boolean mFirstErrorReportFlag;
-  private String mAwsExeExpr = "aws";
+  private String mAwsExeExpr;
 }
