@@ -134,6 +134,17 @@ public class S3Archive extends ArchiveDevice {
     checkSuccess(sc, null);
   }
 
+  /**
+   * Set max items parameter for subsequent call to listFiles(). Reset to
+   * default value after each siuch call.
+   */
+  public S3Archive withMaxItems(int maxItems) {
+    mMaxItems = maxItems;
+    return this;
+  }
+
+  private Integer mMaxItems;
+
   @Override
   public List<CloudFileEntry> listFiles(String prefix) {
     if (isDryRun())
@@ -145,6 +156,11 @@ public class S3Archive extends ArchiveDevice {
     sc.arg("--bucket", mBareBucket);
     if (!nullOrEmpty(prefix))
       sc.arg("--prefix", prefix);
+    if (mMaxItems != null) {
+      sc.arg("--max-items", mMaxItems);
+      mMaxItems = null;
+    }
+
     checkSuccess(sc, null);
     List<CloudFileEntry> fileEntryList = arrayList();
 
