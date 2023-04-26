@@ -48,11 +48,18 @@
       <version>${httpclient.version}</version>
     </dependency>
 
-	<dependency>
-	  <groupId>com.jcraft</groupId>
-	  <artifactId>jsch</artifactId>
-	  <version>0.1.55</version>
-	</dependency>
+    <!-- for more quicker access to S3 than from a separate program -->
+    <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-s3</artifactId>
+        <version>1.12.455</version>
+    </dependency>
+
+  	<dependency>
+  	  <groupId>com.jcraft</groupId>
+  	  <artifactId>jsch</artifactId>
+  	  <version>0.1.55</version>
+  	</dependency>
 
   </dependencies>
 

@@ -26,21 +26,32 @@ package js.webtools;
 
 import static js.base.Tools.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.util.List;
+
+import com.amazonaws.auth.AWSSessionCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import js.webtools.gen.CloudFileEntry;
 import js.base.DateTimeTools;
-import js.base.SystemCall;
-import js.file.FileException;
 import js.file.Files;
-import js.json.JSList;
-import js.json.JSMap;
 import js.parsing.RegExp;
 
 public class S3Archive extends ArchiveDevice {
 
   public S3Archive(String profileName, String bucketName, String subfolderPath, File projectDirectoryOrNull) {
+    todo(
+        "investigate the best practices guide: https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/best-practices.html");
     checkArgument(RegExp.patternMatchesString("^\\w+(?:\\.\\w+)*(?:\\/\\w+(?:\\.\\w+)*)*$", bucketName),
         "bucket name should be of form xxx.yyy/aaa/bbb.ccc");
     mProfileName = profileName;
@@ -51,14 +62,6 @@ public class S3Archive extends ArchiveDevice {
       mSubfolderPrefix = subfolderPath + "/";
     } else
       mSubfolderPrefix = "";
-    if (Files.nonEmpty(projectDirectoryOrNull))
-      mRootDirectory = Files.assertDirectoryExists(projectDirectoryOrNull, "root directory");
-    else
-      mRootDirectory = null;
-  }
-
-  public void setAWSExe(String expr) {
-    mAwsExeExpr = expr;
   }
 
   @Override
@@ -69,30 +72,7 @@ public class S3Archive extends ArchiveDevice {
 
   @Override
   public boolean fileExists(String name) {
-    SystemCall sc = s3APICall();
-    sc.arg("get-object-acl");
-    sc.arg("--bucket", mBareBucket);
-    sc.arg("--key", mSubfolderPrefix + name);
-    return checkSuccess(sc, "(NoSuchKey)");
-  }
-
-  private boolean checkSuccess(SystemCall sc, String optionalErrorSubstring) {
-    if (sc.exitCode() == 0)
-      return true;
-    if (!nullOrEmpty(optionalErrorSubstring)) {
-      String sysErr = sc.systemErr();
-      if (sysErr.contains(optionalErrorSubstring))
-        return false;
-    }
-    if (!mFirstErrorReportFlag) {
-      mFirstErrorReportFlag = true;
-      pr("*** Error:", sc.systemErr());
-      pr("***");
-      pr("*** Do you not have access to the S3 account?");
-      pr("*** Or it might be that the network connection is flaky.");
-      pr("***");
-    }
-    throw FileException.withMessage(sc.systemErr());
+    return s3().doesObjectExist(mBareBucket, mSubfolderPrefix + name);
   }
 
   @Override
@@ -108,41 +88,20 @@ public class S3Archive extends ArchiveDevice {
       DateTimeTools.sleepForRealMs(15000);
       return;
     }
-
-    SystemCall sc = s3APICall();
-    sc.arg("put-object");
-    sc.arg("--bucket", mBareBucket);
-    sc.arg("--key", mSubfolderPrefix + name);
-    sc.arg("--body", source.toString());
-    checkSuccess(sc, null);
-  }
-
-  @Override
-  public void push(byte[] object, String name) {
-    throw notSupported();
+    String key = mSubfolderPrefix + name;
+    s3().putObject(mBareBucket, key, source);
   }
 
   @Override
   public void pull(String name, File destination) {
     if (isDryRun())
       return;
-
     if (destination.isDirectory())
       destination = new File(destination, name);
 
-    SystemCall sc = s3APICall();
-    sc.arg("get-object");
-    sc.arg("--bucket", mBareBucket);
-    sc.arg("--key", mSubfolderPrefix + name);
-    sc.arg(destination);
-
-    checkSuccess(sc, null);
+    s3().getObject(new GetObjectRequest(mBareBucket, mSubfolderPrefix + name), destination);
   }
 
-  /**
-   * Set max items parameter for subsequent call to listFiles(). Reset to
-   * default value after each siuch call.
-   */
   @Override
   public S3Archive withMaxItems(int maxItems) {
     mMaxItems = maxItems;
@@ -157,51 +116,27 @@ public class S3Archive extends ArchiveDevice {
       throw notSupported("not supported in dryrun");
 
     prefix = mSubfolderPrefix + nullToEmpty(prefix);
-    SystemCall sc = s3APICall();
-    sc.arg("list-objects-v2");
-    sc.arg("--bucket", mBareBucket);
-    if (!nullOrEmpty(prefix))
-      sc.arg("--prefix", prefix);
+
+    ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(mBareBucket).withPrefix(prefix);
     if (mMaxItems != null) {
-      sc.arg("--max-items", mMaxItems);
+      request.withMaxKeys(mMaxItems);
       mMaxItems = null;
     }
 
-    checkSuccess(sc, null);
+    ListObjectsV2Result result2 = s3().listObjectsV2(request);
+    List<S3ObjectSummary> objects = result2.getObjectSummaries();
     List<CloudFileEntry> fileEntryList = arrayList();
-
-    // For some stupid reason, if the subfolder doesn't exist, or is empty, it returns an empty string instead
-    // of a json map
-    //
-    String output = sc.systemOut();
-    if (output.isEmpty())
-      return fileEntryList;
-
-    JSMap result = new JSMap(output);
-    JSList items = result.getList("Contents");
-
-    for (JSMap m : items.asMaps()) {
-      String key = m.get("Key");
+    for (S3ObjectSummary os : objects) {
+      String key = os.getKey();
       key = chompPrefix(key, mSubfolderPrefix);
-
       if (key.isEmpty() || key.endsWith("/"))
         continue;
-
       fileEntryList.add(CloudFileEntry.newBuilder() //
           .name(key) //
-          .size(m.getLong("Size"))//
+          .size(os.getSize())//
           .build());
     }
     return fileEntryList;
-  }
-
-  private SystemCall s3APICall() {
-    SystemCall sc = new SystemCall();
-    sc.setVerbose(verbose());
-    if (mRootDirectory != null)
-      sc.directory(mRootDirectory);
-    sc.arg(ifNullOrEmpty(mAwsExeExpr, "aws"), "s3api", "--profile", mProfileName);
-    return sc;
   }
 
   private boolean isDryRun() {
@@ -210,11 +145,56 @@ public class S3Archive extends ArchiveDevice {
     return mDryRun;
   }
 
+  // ---------------------------------
+
+  public void push(byte[] input, String name) {
+    if (isDryRun())
+      return;
+    String key = mSubfolderPrefix + name;
+    InputStream stream = new ByteArrayInputStream(input);
+    ObjectMetadata metadata = new ObjectMetadata();
+    metadata.setContentLength(input.length);
+    s3().putObject(mBareBucket, key, stream, metadata);
+  }
+
+  private AmazonS3 s3() {
+    if (mAws == null) {
+      log("attempting to construct AmazonS3 client");
+      mAws = AmazonS3ClientBuilder.standard() //
+          .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
+          .build();
+    }
+    return mAws;
+  }
+
+  /**
+   * Construct an AWSSessionCredentials by parsing the aws_credentials.txt file
+   * in the project's secrets directory
+   */
+  private AWSSessionCredentials credentials() {
+    String s = Files.readString(Files.S.fileWithinSecrets("aws_credentials.txt"));
+    List<String> rows = split(s, '\n');
+    int i = rows.indexOf("[" + mProfileName + "]");
+    checkArgument(i >= 0, "can't find profile", mProfileName, "in aws_credentials.txt");
+    String key = parseArg(rows.get(i + 1));
+    String secretKey = parseArg(rows.get(i + 2));
+    return new BasicSessionCredentials(key, secretKey, null);
+  }
+
+  /**
+   * Parse the string following the '=' in e.g.:
+   * 
+   * aws_access_key_id = AKIA455B5SQPQW66LPSL
+   */
+  private String parseArg(String arg) {
+    int i = arg.indexOf('=');
+    checkArgument(i >= 0, "can't parse:", arg);
+    return arg.substring(i + 1).trim();
+  }
+
   private final String mProfileName;
-  private final File mRootDirectory;
   private final String mSubfolderPrefix;
   private final String mBareBucket;
   private Boolean mDryRun;
-  private boolean mFirstErrorReportFlag;
-  private String mAwsExeExpr;
+  private AmazonS3 mAws;
 }
