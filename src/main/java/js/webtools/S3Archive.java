@@ -152,6 +152,7 @@ public class S3Archive extends ArchiveDevice {
     if (isDryRun())
       return;
     String key = mSubfolderPrefix + name;
+    log("push", input.length, "bytes, key:", key);
     InputStream stream = new ByteArrayInputStream(input);
     ObjectMetadata metadata = new ObjectMetadata();
     metadata.setContentLength(input.length);
