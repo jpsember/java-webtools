@@ -250,7 +250,7 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
 
         session.setConfig("StrictHostKeyChecking", "no");
 
-        todo("add some optional timing info");
+        // TODO: add some optional timing info here?
         log("connecting");
         if (verbose())
           checkpoint("connecting");

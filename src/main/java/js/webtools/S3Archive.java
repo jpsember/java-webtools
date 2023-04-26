@@ -83,12 +83,13 @@ public class S3Archive extends ArchiveDevice {
     if (nullOrEmpty(name))
       name = source.getName();
 
+    String key = mSubfolderPrefix + name;
+    log("push File:", source, "name:", name, "key:", key);
     if (writesDisabled()) {
       alert("Not writing any files to S3 (for dev purposes); just delaying a bit");
       DateTimeTools.sleepForRealMs(15000);
       return;
     }
-    String key = mSubfolderPrefix + name;
     s3().putObject(mBareBucket, key, source);
   }
 
@@ -163,6 +164,7 @@ public class S3Archive extends ArchiveDevice {
       mAws = AmazonS3ClientBuilder.standard() //
           .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
           .build();
+      log("success");
     }
     return mAws;
   }
