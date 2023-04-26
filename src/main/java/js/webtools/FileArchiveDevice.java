@@ -62,6 +62,11 @@ public class FileArchiveDevice extends ArchiveDevice {
   }
 
   @Override
+  public void push(byte[] object, String name) {
+    throw notSupported();
+  }
+
+  @Override
   public void pull(String name, File destination) {
     if (destination.isDirectory())
       destination = new File(destination, name);
@@ -70,8 +75,13 @@ public class FileArchiveDevice extends ArchiveDevice {
   }
 
   @Override
+  public ArchiveDevice withMaxItems(int maxItems) {
+    throw notSupported();
+  }
+
+  @Override
   public List<CloudFileEntry> listFiles(String prefix) {
-    throw notFinished();
+    throw notSupported();
   }
 
   private Files files() {

@@ -118,6 +118,11 @@ public class S3Archive extends ArchiveDevice {
   }
 
   @Override
+  public void push(byte[] object, String name) {
+    throw notSupported();
+  }
+
+  @Override
   public void pull(String name, File destination) {
     if (isDryRun())
       return;
@@ -138,6 +143,7 @@ public class S3Archive extends ArchiveDevice {
    * Set max items parameter for subsequent call to listFiles(). Reset to
    * default value after each siuch call.
    */
+  @Override
   public S3Archive withMaxItems(int maxItems) {
     mMaxItems = maxItems;
     return this;

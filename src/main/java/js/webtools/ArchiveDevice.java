@@ -28,6 +28,14 @@ public abstract class ArchiveDevice extends BaseObject {
   public abstract void push(File source, String name);
 
   /**
+   * Push a local object to the archive
+   * 
+   * @param name
+   *          if null or empty, uses source.getName()
+   */
+  public abstract void push(byte[] object, String name);
+
+  /**
    * Pull an object from the archive to the local machine
    * 
    * @param destination
@@ -35,6 +43,12 @@ public abstract class ArchiveDevice extends BaseObject {
    *          name 'name'
    */
   public abstract void pull(String name, File destination);
+
+  /**
+   * Set max items parameter for subsequent call to listFiles(). Reset to
+   * default value after each such call. Not necessarily supported.
+   */
+  public abstract ArchiveDevice withMaxItems(int maxItems);
 
   /**
    * Get a list of items within the archive
