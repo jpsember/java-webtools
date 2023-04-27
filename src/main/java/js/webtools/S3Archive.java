@@ -54,8 +54,10 @@ public class S3Archive extends ArchiveDevice {
     mParams = params.build();
     todo("investigate the best practices guide:"
         + " https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/best-practices.html");
-    checkArgument(RegExp.patternMatchesString("^\\w+(?:\\.\\w+)*$", params.bucketName()),
-        "bucket name should be of form xxx[.yy]*");
+
+    // There are more constraints than this regex captures, but this eliminates a lot of bad cases
+    checkArgument(RegExp.patternMatchesString("^[a-zA-Z0-9.-]+$", //
+        params.bucketName()), "illegal bucket name", quote(params.bucketName()));
     updateVerbose();
   }
 
