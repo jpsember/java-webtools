@@ -1,0 +1,4 @@
+fields {
+  string profile;
+  string bucket_name;
+}

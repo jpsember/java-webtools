@@ -43,25 +43,20 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import js.webtools.gen.CloudFileEntry;
+import js.webtools.gen.S3Params;
 import js.base.DateTimeTools;
 import js.file.Files;
 import js.parsing.RegExp;
 
 public class S3Archive extends ArchiveDevice {
 
-  public S3Archive(String profileName, String bucketName, String subfolderPath, File projectDirectoryOrNull) {
+  public S3Archive(S3Params params) {
+    mParams = params.build();
     todo(
         "investigate the best practices guide: https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/best-practices.html");
-    checkArgument(RegExp.patternMatchesString("^\\w+(?:\\.\\w+)*(?:\\/\\w+(?:\\.\\w+)*)*$", bucketName),
+    checkArgument(
+        RegExp.patternMatchesString("^\\w+(?:\\.\\w+)*(?:\\/\\w+(?:\\.\\w+)*)*$", params.bucketName()),
         "bucket name should be of form xxx.yyy/aaa/bbb.ccc");
-    mProfileName = profileName;
-    mBareBucket = bucketName;
-
-    if (!nullOrEmpty(subfolderPath)) {
-      checkArgument(!subfolderPath.endsWith("/"), "unexpected trailing / in subfolderPath");
-      mSubfolderPrefix = subfolderPath + "/";
-    } else
-      mSubfolderPrefix = "";
   }
 
   @Override
@@ -72,7 +67,7 @@ public class S3Archive extends ArchiveDevice {
 
   @Override
   public boolean fileExists(String name) {
-    return s3().doesObjectExist(mBareBucket, mSubfolderPrefix + name);
+    return s3().doesObjectExist(mParams.bucketName(), name);
   }
 
   @Override
@@ -83,14 +78,13 @@ public class S3Archive extends ArchiveDevice {
     if (nullOrEmpty(name))
       name = source.getName();
 
-    String key = mSubfolderPrefix + name;
-    log("push File:", source, "name:", name, "key:", key);
+    log("push File:", source, "name:", name, "bucket:", mParams.bucketName());
     if (writesDisabled()) {
       alert("Not writing any files to S3 (for dev purposes); just delaying a bit");
       DateTimeTools.sleepForRealMs(15000);
       return;
     }
-    s3().putObject(mBareBucket, key, source);
+    s3().putObject(mParams.bucketName(), name, source);
   }
 
   @Override
@@ -100,7 +94,7 @@ public class S3Archive extends ArchiveDevice {
     if (destination.isDirectory())
       destination = new File(destination, name);
 
-    s3().getObject(new GetObjectRequest(mBareBucket, mSubfolderPrefix + name), destination);
+    s3().getObject(new GetObjectRequest(mParams.bucketName(), name), destination);
   }
 
   @Override
@@ -116,9 +110,10 @@ public class S3Archive extends ArchiveDevice {
     if (isDryRun())
       throw notSupported("not supported in dryrun");
 
-    prefix = mSubfolderPrefix + nullToEmpty(prefix);
+    prefix = nullToEmpty(prefix);
 
-    ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(mBareBucket).withPrefix(prefix);
+    ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(mParams.bucketName())
+        .withPrefix(prefix);
     if (mMaxItems != null) {
       request.withMaxKeys(mMaxItems);
       mMaxItems = null;
@@ -129,7 +124,7 @@ public class S3Archive extends ArchiveDevice {
     List<CloudFileEntry> fileEntryList = arrayList();
     for (S3ObjectSummary os : objects) {
       String key = os.getKey();
-      key = chompPrefix(key, mSubfolderPrefix);
+      key = chompPrefix(key, mParams.bucketName());
       if (key.isEmpty() || key.endsWith("/"))
         continue;
       fileEntryList.add(CloudFileEntry.newBuilder() //
@@ -148,15 +143,14 @@ public class S3Archive extends ArchiveDevice {
 
   // ---------------------------------
 
-  public void push(byte[] input, String name) {
+  public void push(byte[] input, String key) {
     if (isDryRun())
       return;
-    String key = mSubfolderPrefix + name;
     log("push", input.length, "bytes, key:", key);
     InputStream stream = new ByteArrayInputStream(input);
     ObjectMetadata metadata = new ObjectMetadata();
     metadata.setContentLength(input.length);
-    s3().putObject(mBareBucket, key, stream, metadata);
+    s3().putObject(mParams.bucketName(), key, stream, metadata);
   }
 
   private AmazonS3 s3() {
@@ -177,8 +171,8 @@ public class S3Archive extends ArchiveDevice {
   private AWSSessionCredentials credentials() {
     String s = Files.readString(Files.S.fileWithinSecrets("aws_credentials.txt"));
     List<String> rows = split(s, '\n');
-    int i = rows.indexOf("[" + mProfileName + "]");
-    checkArgument(i >= 0, "can't find profile", mProfileName, "in aws_credentials.txt");
+    int i = rows.indexOf("[" + mParams.profile() + "]");
+    checkArgument(i >= 0, "can't find profile", mParams.profile(), "in aws_credentials.txt");
     String key = parseArg(rows.get(i + 1));
     String secretKey = parseArg(rows.get(i + 2));
     return new BasicSessionCredentials(key, secretKey, null);
@@ -195,9 +189,7 @@ public class S3Archive extends ArchiveDevice {
     return arg.substring(i + 1).trim();
   }
 
-  private final String mProfileName;
-  private final String mSubfolderPrefix;
-  private final String mBareBucket;
+  private final S3Params mParams;
   private Boolean mDryRun;
   private AmazonS3 mAws;
 }
