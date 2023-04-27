@@ -52,11 +52,11 @@ public class S3Archive extends ArchiveDevice {
 
   public S3Archive(S3Params params) {
     mParams = params.build();
-    todo(
-        "investigate the best practices guide: https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/best-practices.html");
-    checkArgument(
-        RegExp.patternMatchesString("^\\w+(?:\\.\\w+)*(?:\\/\\w+(?:\\.\\w+)*)*$", params.bucketName()),
-        "bucket name should be of form xxx.yyy/aaa/bbb.ccc");
+    todo("investigate the best practices guide:"
+        + " https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/best-practices.html");
+    checkArgument(RegExp.patternMatchesString("^\\w+(?:\\.\\w+)*$", params.bucketName()),
+        "bucket name should be of form xxx[.yy]*");
+    updateVerbose();
   }
 
   @Override
@@ -106,14 +106,13 @@ public class S3Archive extends ArchiveDevice {
   private Integer mMaxItems;
 
   @Override
-  public List<CloudFileEntry> listFiles(String prefix) {
+  public List<CloudFileEntry> listFiles(String path) {
     if (isDryRun())
       throw notSupported("not supported in dryrun");
-
-    prefix = nullToEmpty(prefix);
-
+    path = nullToEmpty(path);
+    log("listFiles, path:", path, "params:", INDENT, mParams);
     ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(mParams.bucketName())
-        .withPrefix(prefix);
+        .withPrefix(path);
     if (mMaxItems != null) {
       request.withMaxKeys(mMaxItems);
       mMaxItems = null;
@@ -161,6 +160,7 @@ public class S3Archive extends ArchiveDevice {
           .build();
       log("success");
     }
+    updateVerbose();
     return mAws;
   }
 
