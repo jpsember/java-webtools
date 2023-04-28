@@ -47,6 +47,7 @@ public class FileArchiveDevice extends ArchiveDevice {
 
   @Override
   public boolean fileExists(String name) {
+    log("fileExists, name:", name);
     return fileWithinArchive(name).exists();
   }
 
@@ -56,6 +57,7 @@ public class FileArchiveDevice extends ArchiveDevice {
 
   @Override
   public void push(File source, String name) {
+    log("push, source:", source, "name:", name);
     File target = fileWithinArchive(name);
     files().mkdirs(Files.parent(target));
     files().copyFile(source, target);
@@ -68,6 +70,7 @@ public class FileArchiveDevice extends ArchiveDevice {
 
   @Override
   public void pull(String name, File destination) {
+    log("pull, name:", name, "destination:", destination);
     if (destination.isDirectory())
       destination = new File(destination, name);
     File source = fileWithinArchive(name);

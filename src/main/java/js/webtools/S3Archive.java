@@ -69,7 +69,9 @@ public class S3Archive extends ArchiveDevice {
 
   @Override
   public boolean fileExists(String name) {
-    return s3().doesObjectExist(mParams.bucketName(), name);
+    boolean result = s3().doesObjectExist(mParams.bucketName(), name);
+    log("fileExists; bucket:", mParams.bucketName(), "name:", name, "result:", result);
+    return result;
   }
 
   @Override
@@ -93,9 +95,10 @@ public class S3Archive extends ArchiveDevice {
   public void pull(String name, File destination) {
     if (isDryRun())
       return;
+    log("pull File:",destination,"name:",name,"bucket:",mParams.bucketName());
     if (destination.isDirectory())
       destination = new File(destination, name);
-
+    log("pulling to directory; destination now:",destination);
     s3().getObject(new GetObjectRequest(mParams.bucketName(), name), destination);
   }
 
@@ -133,6 +136,7 @@ public class S3Archive extends ArchiveDevice {
           .size(os.getSize())//
           .build());
     }
+    log("number of files:", fileEntryList.size());
     return fileEntryList;
   }
 
