@@ -52,8 +52,11 @@ public abstract class ArchiveDevice extends BaseObject {
 
   /**
    * Get a list of items within the archive
+   * 
+   * @param path
+   *          optional prefix that items must have
    */
-  public abstract List<CloudFileEntry> listFiles(String prefixOrNull);
+  public abstract List<CloudFileEntry> listFiles(String path);
 
   /**
    * For test purposes: simulate a network outage for any subsequent calls

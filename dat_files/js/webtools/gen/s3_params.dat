@@ -1,4 +1,13 @@
 fields {
+
+  // Parses ~/.aws/credentials for a line "[<profile>]"
+  // to read the access key id and secret key
+  //
   string profile;
+
   string bucket_name;
+
+  // If nonempty, this path is prepended to each method's name argument
+  //
+  string folder_path;
 }

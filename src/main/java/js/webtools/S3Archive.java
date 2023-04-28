@@ -55,9 +55,21 @@ public class S3Archive extends ArchiveDevice {
     todo("investigate the best practices guide:"
         + " https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/best-practices.html");
 
+    String a = params.bucketName();
     // There are more constraints than this regex captures, but this eliminates a lot of bad cases
-    checkArgument(RegExp.patternMatchesString("^[a-zA-Z0-9.-]+$", //
-        params.bucketName()), "illegal bucket name", quote(params.bucketName()));
+    checkArgument(RegExp.patternMatchesString("[a-zA-Z0-9.-]+", //
+        a), "illegal bucket name", quote(a));
+
+    a = params.folderPath();
+    if (nonEmpty(a))
+      checkArgument(RegExp.patternMatchesString("(\\w|-)+(:?\\/(\\w|-)+)*", //
+          a), "illegal folder path", quote(a));
+
+    if (nonEmpty(mParams.folderPath()))
+      absFolderPathPrefix = mParams.folderPath() + "/";
+    else
+      absFolderPathPrefix = "";
+
     updateVerbose();
   }
 
@@ -68,38 +80,41 @@ public class S3Archive extends ArchiveDevice {
   }
 
   @Override
-  public boolean fileExists(String name) {
-    boolean result = s3().doesObjectExist(mParams.bucketName(), name);
-    log("fileExists; bucket:", mParams.bucketName(), "name:", name, "result:", result);
+  public boolean fileExists(String path) {
+    String absPath = absPath(path);
+    boolean result = s3().doesObjectExist(mParams.bucketName(), absPath);
+    log("fileExists; bucket:", mParams.bucketName(), "path:", absPath, "result:", result);
     return result;
   }
 
   @Override
-  public void push(File source, String name) {
+  public void push(File source, String path) {
     if (isDryRun())
       return;
 
-    if (nullOrEmpty(name))
-      name = source.getName();
+    if (nullOrEmpty(path))
+      path = source.getName();
 
-    log("push File:", source, "name:", name, "bucket:", mParams.bucketName());
+    String absPath = absPath(path);
+    log("push File:", source, "path:", absPath, "bucket:", mParams.bucketName());
     if (writesDisabled()) {
       alert("Not writing any files to S3 (for dev purposes); just delaying a bit");
       DateTimeTools.sleepForRealMs(15000);
       return;
     }
-    s3().putObject(mParams.bucketName(), name, source);
+    s3().putObject(mParams.bucketName(), absPath, source);
   }
 
   @Override
-  public void pull(String name, File destination) {
+  public void pull(String path, File destination) {
     if (isDryRun())
       return;
-    log("pull File:",destination,"name:",name,"bucket:",mParams.bucketName());
+    String absPath = absPath(path);
+    log("pull File:", destination, "path:", absPath, "bucket:", mParams.bucketName());
     if (destination.isDirectory())
-      destination = new File(destination, name);
-    log("pulling to directory; destination now:",destination);
-    s3().getObject(new GetObjectRequest(mParams.bucketName(), name), destination);
+      destination = new File(destination, path);
+    log("pulling to directory; destination now:", destination);
+    s3().getObject(new GetObjectRequest(mParams.bucketName(), absPath), destination);
   }
 
   @Override
@@ -114,7 +129,7 @@ public class S3Archive extends ArchiveDevice {
   public List<CloudFileEntry> listFiles(String path) {
     if (isDryRun())
       throw notSupported("not supported in dryrun");
-    path = nullToEmpty(path);
+    path = absPath(nullToEmpty(path));
     log("listFiles, path:", path, "params:", INDENT, mParams);
     ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(mParams.bucketName())
         .withPrefix(path);
@@ -148,14 +163,15 @@ public class S3Archive extends ArchiveDevice {
 
   // ---------------------------------
 
-  public void push(byte[] input, String key) {
+  public void push(byte[] input, String path) {
     if (isDryRun())
       return;
-    log("push", input.length, "bytes, key:", key);
+    path = absPath(path);
+    log("push", input.length, "bytes, path:", path);
     InputStream stream = new ByteArrayInputStream(input);
     ObjectMetadata metadata = new ObjectMetadata();
     metadata.setContentLength(input.length);
-    s3().putObject(mParams.bucketName(), key, stream, metadata);
+    s3().putObject(mParams.bucketName(), path, stream, metadata);
   }
 
   private AmazonS3 s3() {
@@ -195,7 +211,13 @@ public class S3Archive extends ArchiveDevice {
     return arg.substring(i + 1).trim();
   }
 
+  private String absPath(String relativePath) {
+    checkArgument(!relativePath.startsWith("/"));
+    return absFolderPathPrefix + relativePath;
+  }
+
   private final S3Params mParams;
+  private final String absFolderPathPrefix;
   private Boolean mDryRun;
   private AmazonS3 mAws;
 }
