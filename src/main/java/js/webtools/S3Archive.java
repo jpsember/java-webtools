@@ -177,10 +177,15 @@ public class S3Archive extends ArchiveDevice {
   private AmazonS3 s3() {
     if (mAws == null) {
       log("attempting to construct AmazonS3 client");
-      mAws = AmazonS3ClientBuilder.standard() //
-          .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
-          .build();
-      log("success");
+      try {
+        mAws = AmazonS3ClientBuilder.standard() //
+            .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
+            .build();
+        log("success");
+      } catch (Throwable t) {
+        alert("Failed to construct AmazonS3Client!");
+        throw t;
+      }
     }
     updateVerbose();
     return mAws;
