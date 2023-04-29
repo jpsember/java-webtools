@@ -35,8 +35,6 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -75,9 +73,9 @@ public class S3Archive extends ArchiveDevice {
 
     updateVerbose();
 
-    if (alert("constructing connection immediately")) {
-      s3();
-    }
+    // Attempt to construct a connection immediately, so we don't waste time waiting for 
+    // an event to see if there are obvious problems
+    s3();
   }
 
   @Override
@@ -184,32 +182,31 @@ public class S3Archive extends ArchiveDevice {
 
   private AmazonS3 s3() {
     if (mAws == null) {
-      log("attempting to construct AmazonS3 client");
+      log("attempting to construct AmazonS3 client, parameters:", INDENT, mParams);
       try {
-
-        String regionName = "us-east-1";
-        pr("Calling getRegionMetadata");
-        RegionUtils.getRegionMetadata();
-        pr("Calling getRegion with", regionName);
-        Region region = RegionUtils.getRegion(regionName);
-        pr("got region:", region);
-
+        boolean useClientConfiguration = false;
         ClientConfiguration cc = new ClientConfiguration();
-
-        if (mParams.connectionTimeoutMs() != 0)
+        if (mParams.connectionTimeoutMs() != 0) {
+          useClientConfiguration = true;
           cc.withConnectionTimeout(mParams.connectionTimeoutMs());
-        if (mParams.socketTimeoutMs() != 0)
+        }
+        if (mParams.socketTimeoutMs() != 0) {
           cc.withSocketTimeout(mParams.socketTimeoutMs());
-        log("parameters:", mParams);
+          useClientConfiguration = true;
+        }
 
-        mAws = AmazonS3ClientBuilder.standard() //
-            .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
-            // Do we need to explicitly set the same region that the bucket was created with?
-            //   http://opensourceforgeeks.blogspot.com/2018/07/how-to-fix-unable-to-find-region-via.html
+        AmazonS3ClientBuilder b = AmazonS3ClientBuilder.standard();
+        b.withCredentials(new AWSStaticCredentialsProvider(credentials()));
 
-            .withRegion(regionName) // 
-            .withClientConfiguration(cc) //
-            .build();
+        // Do we need to explicitly set the same region that the bucket was created with?
+        //   http://opensourceforgeeks.blogspot.com/2018/07/how-to-fix-unable-to-find-region-via.html
+        if (nonEmpty(mParams.region()))
+          b.withRegion(mParams.region());
+
+        if (useClientConfiguration)
+          b.withClientConfiguration(cc);
+
+        mAws = b.build();
         log("success");
       } catch (Throwable t) {
         alert("Failed to construct AmazonS3Client!");
