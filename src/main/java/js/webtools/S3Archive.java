@@ -35,6 +35,8 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -185,6 +187,13 @@ public class S3Archive extends ArchiveDevice {
       log("attempting to construct AmazonS3 client");
       try {
 
+        String regionName = "us-west-2";
+        pr("Calling getRegionMetadata");
+        RegionUtils.getRegionMetadata();
+        pr("Calling getRegion with", regionName);
+        Region region = RegionUtils.getRegion(regionName);
+        pr("got region:", region);
+
         ClientConfiguration cc = new ClientConfiguration();
 
         if (mParams.connectionTimeoutMs() != 0)
@@ -197,7 +206,8 @@ public class S3Archive extends ArchiveDevice {
             .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
             // Do we need to explicitly set the same region that the bucket was created with?
             //   http://opensourceforgeeks.blogspot.com/2018/07/how-to-fix-unable-to-find-region-via.html
-            .withRegion("us-west-2") // 
+
+            .withRegion(regionName) // 
             .withClientConfiguration(cc) //
             .build();
         log("success");
