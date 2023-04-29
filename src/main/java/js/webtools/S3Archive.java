@@ -46,7 +46,9 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import js.webtools.gen.CloudFileEntry;
 import js.webtools.gen.S3Params;
 import js.base.DateTimeTools;
+import js.file.FileException;
 import js.file.Files;
+import js.json.JSMap;
 import js.parsing.RegExp;
 
 public class S3Archive extends ArchiveDevice {
@@ -197,11 +199,24 @@ public class S3Archive extends ArchiveDevice {
 
         AmazonS3ClientBuilder b = AmazonS3ClientBuilder.standard();
         b.withCredentials(new AWSStaticCredentialsProvider(credentials()));
+        log("found credentials");
 
         // Do we need to explicitly set the same region that the bucket was created with?
         //   http://opensourceforgeeks.blogspot.com/2018/07/how-to-fix-unable-to-find-region-via.html
-        if (nonEmpty(mParams.region()))
-          b.withRegion(mParams.region());
+        {
+          JSMap config = parseAWSFile("aws_config.txt");
+          log("parsed aws_config.txt:", INDENT, config);
+          JSMap profileMap = config.optJSMap(mParams.profile());
+          if (profileMap == null) {
+            log("No profile found in aws_config.txt for:", mParams.profile(), "; trying default");
+            profileMap = config.optJSMap("default");
+          }
+          checkState(profileMap != null, "can't find profile in aws_config.txt");
+          String region = profileMap.opt("region", "");
+          checkState(!nullOrEmpty(region), "no region specified");
+          log("region is", region);
+          b.withRegion(region);
+        }
 
         if (useClientConfiguration)
           b.withClientConfiguration(cc);
@@ -222,24 +237,64 @@ public class S3Archive extends ArchiveDevice {
    * in the project's secrets directory
    */
   private AWSSessionCredentials credentials() {
-    String s = Files.readString(Files.S.fileWithinSecrets("aws_credentials.txt"));
-    List<String> rows = split(s, '\n');
-    int i = rows.indexOf("[" + mParams.profile() + "]");
-    checkArgument(i >= 0, "can't find profile", mParams.profile(), "in aws_credentials.txt");
-    String key = parseArg(rows.get(i + 1));
-    String secretKey = parseArg(rows.get(i + 2));
+    JSMap creds = parseAWSFile("aws_credentials.txt");
+    JSMap profileMap = creds.optJSMap(mParams.profile());
+    checkState(profileMap != null, "can't find profile", mParams.profile(), "in aws_credentials.txt");
+
+    String key = profileMap.get("aws_access_key_id");
+    String secretKey = profileMap.get("aws_secret_access_key");
     return new BasicSessionCredentials(key, secretKey, null);
   }
 
-  /**
-   * Parse the string following the '=' in e.g.:
-   * 
-   * aws_access_key_id = AKIA455B5SQPQW66LPSL
-   */
-  private String parseArg(String arg) {
-    int i = arg.indexOf('=');
-    checkArgument(i >= 0, "can't parse:", arg);
-    return arg.substring(i + 1).trim();
+  private JSMap parseAWSFile(String name) {
+    File f = Files.S.fileWithinSecrets(name);
+    String s = Files.readString(f);
+    List<String> rows = split(s, '\n');
+
+    // Remove any comment lines; we will assume that this is lines that have '#' in them, and
+    // will generate a warning if there are any such lines that don't start with '#'
+    {
+      List<String> filtered = arrayList();
+      for (String row : rows) {
+        row = row.trim();
+        if (nullOrEmpty(row))
+          continue;
+        if (row.contains("#")) {
+          if (!row.startsWith("#")) {
+            alert("Configuration file:", f, "has unexpected '#' character(s)");
+          }
+          continue;
+        }
+        filtered.add(row);
+      }
+      rows = filtered;
+    }
+
+    JSMap result = map();
+
+    try {
+      JSMap currentGroup = null;
+
+      String groupId = null;
+      for (String row : rows) {
+        if (row.startsWith("[")) {
+          checkArgument(row.endsWith("]"));
+          groupId = row.substring(1, row.length() - 1);
+          checkArgument(!result.containsKey(groupId));
+          currentGroup = new JSMap();
+          result.put(groupId, currentGroup);
+          continue;
+        }
+        List<String> words = split(row, '=');
+        checkArgument(words.size() == 2);
+        String key = words.get(0).trim();
+        String value = words.get(1).trim();
+        currentGroup.put(key, value);
+      }
+    } catch (Throwable t) {
+      throw FileException.withCause(t, "Problem parsing configuration file:", f);
+    }
+    return result;
   }
 
   private String absPath(String relativePath) {

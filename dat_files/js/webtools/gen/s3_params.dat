@@ -12,7 +12,8 @@ fields {
   string folder_path;
 
   // If nonempty, explicitly sets this region
-  string region;
+  // DEPRECATED: parse the aws configuration file instead
+  -string region;
 
   // If nonzero, these values get stored in a ConnectionConfiguration:
   //
