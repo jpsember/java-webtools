@@ -31,7 +31,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 
-import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
@@ -185,48 +184,29 @@ public class S3Archive extends ArchiveDevice {
   private AmazonS3 s3() {
     if (mAws == null) {
       log("attempting to construct AmazonS3 client, parameters:", INDENT, mParams);
-      try {
-        boolean useClientConfiguration = false;
-        ClientConfiguration cc = new ClientConfiguration();
-        if (mParams.connectionTimeoutMs() != 0) {
-          useClientConfiguration = true;
-          cc.withConnectionTimeout(mParams.connectionTimeoutMs());
+      AmazonS3ClientBuilder b = AmazonS3ClientBuilder.standard();
+      b.withCredentials(new AWSStaticCredentialsProvider(credentials()));
+      log("found credentials");
+
+      // Apparently we need to explicitly set the same region that the bucket was created with:
+      //
+      //   http://opensourceforgeeks.blogspot.com/2018/07/how-to-fix-unable-to-find-region-via.html
+      {
+        JSMap config = parseAWSFile("aws_config.txt");
+        log("parsed aws_config.txt:", INDENT, config);
+        JSMap profileMap = config.optJSMap(mParams.profile());
+        if (profileMap == null) {
+          log("No profile found in aws_config.txt for:", mParams.profile(), "; trying default");
+          profileMap = config.optJSMap("default");
         }
-        if (mParams.socketTimeoutMs() != 0) {
-          cc.withSocketTimeout(mParams.socketTimeoutMs());
-          useClientConfiguration = true;
-        }
-
-        AmazonS3ClientBuilder b = AmazonS3ClientBuilder.standard();
-        b.withCredentials(new AWSStaticCredentialsProvider(credentials()));
-        log("found credentials");
-
-        // Do we need to explicitly set the same region that the bucket was created with?
-        //   http://opensourceforgeeks.blogspot.com/2018/07/how-to-fix-unable-to-find-region-via.html
-        {
-          JSMap config = parseAWSFile("aws_config.txt");
-          log("parsed aws_config.txt:", INDENT, config);
-          JSMap profileMap = config.optJSMap(mParams.profile());
-          if (profileMap == null) {
-            log("No profile found in aws_config.txt for:", mParams.profile(), "; trying default");
-            profileMap = config.optJSMap("default");
-          }
-          checkState(profileMap != null, "can't find profile in aws_config.txt");
-          String region = profileMap.opt("region", "");
-          checkState(!nullOrEmpty(region), "no region specified");
-          log("region is", region);
-          b.withRegion(region);
-        }
-
-        if (useClientConfiguration)
-          b.withClientConfiguration(cc);
-
-        mAws = b.build();
-        log("success");
-      } catch (Throwable t) {
-        alert("Failed to construct AmazonS3Client!");
-        throw t;
+        checkState(profileMap != null, "can't find profile in aws_config.txt");
+        String region = profileMap.opt("region", "");
+        checkState(!nullOrEmpty(region), "no region specified");
+        log("region is", region);
+        b.withRegion(region);
       }
+      mAws = b.build();
+      log("success");
     }
     updateVerbose();
     return mAws;

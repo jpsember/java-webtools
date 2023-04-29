@@ -1,7 +1,7 @@
 fields {
 
-  // Parses ~/.aws/credentials for a line "[<profile>]"
-  // to read the access key id and secret key
+  // Parses credentials, config files in project secrets
+  // to read access keys, regions
   //
   string profile;
 
@@ -10,13 +10,4 @@ fields {
   // If nonempty, this path is prepended to each method's name argument
   //
   string folder_path;
-
-  // If nonempty, explicitly sets this region
-  // DEPRECATED: parse the aws configuration file instead
-  -string region;
-
-  // If nonzero, these values get stored in a ConnectionConfiguration:
-  //
-  int connection_timeout_ms;
-  int socket_timeout_ms;
 }
