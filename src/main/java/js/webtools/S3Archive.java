@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
@@ -71,6 +72,10 @@ public class S3Archive extends ArchiveDevice {
       absFolderPathPrefix = "";
 
     updateVerbose();
+
+    if (alert("constructing connection immediately")) {
+      s3();
+    }
   }
 
   @Override
@@ -171,6 +176,7 @@ public class S3Archive extends ArchiveDevice {
     InputStream stream = new ByteArrayInputStream(input);
     ObjectMetadata metadata = new ObjectMetadata();
     metadata.setContentLength(input.length);
+    // See https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/
     s3().putObject(mParams.bucketName(), path, stream, metadata);
   }
 
@@ -178,8 +184,18 @@ public class S3Archive extends ArchiveDevice {
     if (mAws == null) {
       log("attempting to construct AmazonS3 client");
       try {
+
+        ClientConfiguration cc = new ClientConfiguration();
+
+        if (mParams.connectionTimeoutMs() != 0)
+          cc.withConnectionTimeout(mParams.connectionTimeoutMs());
+        if (mParams.socketTimeoutMs() != 0)
+          cc.withSocketTimeout(mParams.socketTimeoutMs());
+        log("parameters:", mParams);
+
         mAws = AmazonS3ClientBuilder.standard() //
             .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
+            .withClientConfiguration(cc) //
             .build();
         log("success");
       } catch (Throwable t) {

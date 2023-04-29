@@ -10,4 +10,9 @@ fields {
   // If nonempty, this path is prepended to each method's name argument
   //
   string folder_path;
+
+  // If nonzero, these values get stored in a ConnectionConfiguration:
+  //
+  int connection_timeout_ms;
+  int socket_timeout_ms;
 }
