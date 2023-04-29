@@ -195,6 +195,9 @@ public class S3Archive extends ArchiveDevice {
 
         mAws = AmazonS3ClientBuilder.standard() //
             .withCredentials(new AWSStaticCredentialsProvider(credentials())) //
+            // Do we need to explicitly set the same region that the bucket was created with?
+            //   http://opensourceforgeeks.blogspot.com/2018/07/how-to-fix-unable-to-find-region-via.html
+            .withRegion("us-west-2") // 
             .withClientConfiguration(cc) //
             .build();
         log("success");
