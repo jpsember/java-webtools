@@ -187,7 +187,7 @@ public class S3Archive extends ArchiveDevice {
       log("attempting to construct AmazonS3 client");
       try {
 
-        String regionName = "us-west-2";
+        String regionName = "us-east-1";
         pr("Calling getRegionMetadata");
         RegionUtils.getRegionMetadata();
         pr("Calling getRegion with", regionName);
