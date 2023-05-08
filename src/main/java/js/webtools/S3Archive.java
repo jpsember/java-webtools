@@ -217,6 +217,7 @@ public class S3Archive extends ArchiveDevice {
    * in the project's secrets directory
    */
   private AWSSessionCredentials credentials() {
+    todo("Since we own these files, they can be json instead of this custom AWS format");
     JSMap creds = parseAWSFile("aws_credentials.txt");
     JSMap profileMap = creds.optJSMap(mParams.profile());
     checkState(profileMap != null, "can't find profile", mParams.profile(), "in aws_credentials.txt");

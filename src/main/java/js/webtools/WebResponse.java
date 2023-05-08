@@ -44,8 +44,6 @@ import js.webtools.WebRequest.Verb;
  * Parameters for SERVICING http requests. The request's input parameters can be
  * read from it, and the outputs can be written to it
  */
-//This suppresses the 'access restriction' warning on the com.sun.net webserver classes
-@SuppressWarnings("restriction")
 public final class WebResponse extends BaseObject {
 
   // ------------------------------------------------------------------
