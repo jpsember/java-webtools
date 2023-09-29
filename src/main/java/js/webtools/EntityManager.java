@@ -153,9 +153,11 @@ public final class EntityManager extends BaseObject {
       builder.user(template.user());
     if (Files.empty(builder.projectDir()))
       builder.projectDir(template.projectDir());
-    // Clear out the dynamic elements, which shouldn't exist (except in an older version), 
-    // as they are never written back to the registry
-    builder.port(null).url(null);
+    if (!builder.staticUrl()) {
+      // Clear out the dynamic elements, which shouldn't exist (except in an older version), 
+      // as they are never written back to the registry
+      builder.port(null).url(null);
+    }
     return builder;
   }
 

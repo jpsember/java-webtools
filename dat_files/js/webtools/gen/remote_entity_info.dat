@@ -9,6 +9,8 @@ fields {
   //
   File project_dir;
 
+  bool static_url;      // True if not using n
+
   // These are dynamic elements that are filled in with results of ngrok API
   //
   ?string url;
