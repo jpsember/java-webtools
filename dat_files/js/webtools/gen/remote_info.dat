@@ -1,0 +1,7 @@
+// Info stored in home directory (perhaps)
+// concerning the active remote handler, remote machnine
+
+fields {
+  string active_handler_name;
+  RemoteEntityInfo active_entity;
+}

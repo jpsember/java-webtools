@@ -29,8 +29,8 @@ import static js.base.Tools.*;
 import java.io.File;
 import java.util.List;
 
-import js.webtools.gen.CloudFileEntry;
 import js.file.Files;
+import js.webtools.gen.CloudFileEntry;
 
 public class FileArchiveDevice extends ArchiveDevice {
 

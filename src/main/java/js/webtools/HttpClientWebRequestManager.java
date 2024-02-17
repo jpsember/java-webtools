@@ -34,9 +34,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import js.json.JSMap;
-import js.webtools.WebRequest.Verb;
-
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
@@ -54,6 +51,9 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+
+import js.json.JSMap;
+import js.webtools.WebRequest.Verb;
 
 public class HttpClientWebRequestManager extends WebRequestManager {
 

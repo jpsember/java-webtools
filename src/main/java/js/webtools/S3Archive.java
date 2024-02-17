@@ -42,13 +42,13 @@ import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
-import js.webtools.gen.CloudFileEntry;
-import js.webtools.gen.S3Params;
 import js.base.DateTimeTools;
 import js.file.FileException;
 import js.file.Files;
 import js.json.JSMap;
 import js.parsing.RegExp;
+import js.webtools.gen.CloudFileEntry;
+import js.webtools.gen.S3Params;
 
 public class S3Archive extends ArchiveDevice {
 

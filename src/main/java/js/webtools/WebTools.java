@@ -26,12 +26,14 @@ package js.webtools;
 
 import static js.base.Tools.*;
 
-import java.util.*;
-
-import js.file.Files;
-import js.json.*;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.http.NameValuePair;
+
+import js.file.Files;
+import js.json.JSList;
+import js.json.JSMap;
 
 public final class WebTools {
 

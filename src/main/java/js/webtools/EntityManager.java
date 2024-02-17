@@ -31,6 +31,7 @@ import java.util.Map;
 
 import js.base.BaseObject;
 import js.file.Files;
+import js.json.JSMap;
 import js.webtools.gen.DynamicEntityInfo;
 import js.webtools.gen.OsType;
 import js.webtools.gen.RemoteEntityCollection;
@@ -54,6 +55,19 @@ import js.webtools.gen.RemoteEntityInfo;
  * </pre>
  */
 public final class EntityManager extends BaseObject {
+
+  public JSMap getLinodeInfo() {
+    return JSMap.fromFileIfExists(linodeEntityFile());
+  }
+
+  public void setLinodeInfo(JSMap m) {
+    var activeFile = linodeEntityFile();
+    files().writeString(activeFile, m.toString());
+  }
+
+  private File linodeEntityFile() {
+    return new File(Files.homeDirectory(), ".linode_entity");
+  }
 
   public static EntityManager sharedInstance() {
     if (sSharedInstance == null)
@@ -153,11 +167,11 @@ public final class EntityManager extends BaseObject {
       builder.user(template.user());
     if (Files.empty(builder.projectDir()))
       builder.projectDir(template.projectDir());
-    if (!builder.staticUrl()) {
-      // Clear out the dynamic elements, which shouldn't exist (except in an older version), 
-      // as they are never written back to the registry
-      builder.port(null).url(null);
-    }
+//    if (!builder.staticUrl()) {
+//      // Clear out the dynamic elements, which shouldn't exist (except in an older version), 
+//      // as they are never written back to the registry
+//      builder.port(null).url(null);
+//    }
     return builder;
   }
 
