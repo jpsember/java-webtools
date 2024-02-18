@@ -1,6 +1,7 @@
 enum js.webtools.gen.OsType;
 
 fields {
+  // This is also the same as the 'name' in the RemoteHandler interface
   string id;
   string user;
   string url;

@@ -60,6 +60,7 @@ public final class EntityManager extends BaseObject {
     return JSMap.fromFileIfExists(linodeEntityFile());
   }
 
+//  @Deprecated // Use RemoteManager
   public void setLinodeInfo(JSMap m) {
     var activeFile = linodeEntityFile();
     files().writeString(activeFile, m.toString());
