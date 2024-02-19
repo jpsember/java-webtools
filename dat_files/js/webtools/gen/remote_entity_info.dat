@@ -1,15 +1,9 @@
-enum js.webtools.gen.OsType;
-
 fields {
-  // This is also the same as the 'name' in the RemoteHandler interface
-  string id;
+  string label;
   string user;
   string url;
   int port;
 
-  // Directory containing the project; the one containing the git repo (on the remote machine)
-  //
+  // Default directory (must be absolute)
   File project_dir;
-
-  OsType os_type;
 }

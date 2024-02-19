@@ -74,11 +74,11 @@ public class Ngrok extends BaseObject {
    * port fields filled in; or null if no ngrok information exists
    */
   public RemoteEntityInfo addNgrokInfo(RemoteEntityInfo entity, boolean mustExist) {
-    RemoteEntityInfo tunnel = remoteEntityInfoMap().get(entity.id());
+    RemoteEntityInfo tunnel = remoteEntityInfoMap().get(entity.label());
     if (tunnel == null) {
       if (mustExist)
-        throw badArg("no ngrok tunnel found for entity:", entity.id());
-      log("*** no ngrok tunnel found for entity:", entity.id());
+        throw badArg("no ngrok tunnel found for entity:", entity.label());
+      log("*** no ngrok tunnel found for entity:", entity.label());
       return null;
     }
     return entity.build().toBuilder().url(tunnel.url()).port(tunnel.port()).build();

@@ -14,11 +14,14 @@ public class RemoteManager extends BaseObject {
   public static final RemoteManager SHARED_INSTANCE = new RemoteManager();
 
   private RemoteManager() {
+    alertVerbose();
   }
 
   public RemoteInfo.Builder info() {
     if (mRemoteInfo == null) {
+      var f = persistFile();
       mRemoteInfo = Files.parseAbstractDataOpt(RemoteInfo.DEFAULT_INSTANCE, persistFile()).toBuilder();
+      log("parsed RemoteInfo from:", INDENT, Files.infoMap(f), CR, mRemoteInfo);
       sRemoteInfoModified = false;
     }
     return mRemoteInfo;
