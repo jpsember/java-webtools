@@ -213,17 +213,15 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
 
       try {
         JSch jsch = new JSch();
-        mEntityManager = EntityManager.sharedInstance();
+        var mgr = RemoteManager.SHARED_INSTANCE;
+        // mEntityManager = EntityManager.sharedInstance();
 
-        RemoteEntityInfo markerEntity = mEntityManager.entity(mEntityId);
-        if (markerEntity == null)
-          badState("no such cow_marker_entity_id found:", mEntityId);
+        RemoteEntityInfo ent = mgr.activeEntity();
+        //ent = Ngrok.sharedInstance().addNgrokInfo(ent, true);
 
-        markerEntity = Ngrok.sharedInstance().addNgrokInfo(markerEntity, true);
-
-        String username = markerEntity.user();
-        String host = markerEntity.url();
-        int port = markerEntity.port();
+        String username = ent.user();
+        String host = ent.url();
+        int port = ent.port();
 
         // The key pair must be generated with this command:
         //
@@ -296,7 +294,6 @@ public class RemoteChannel extends BaseObject implements AutoCloseable {
     return mChannelExec;
   }
 
-  private EntityManager mEntityManager;
   private Session mSession;
   private ChannelSftp mChannelSftp;
   private ChannelExec mChannelExec;

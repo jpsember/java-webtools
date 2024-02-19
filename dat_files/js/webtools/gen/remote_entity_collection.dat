@@ -1,7 +1,0 @@
-fields {
-  map string RemoteEntityInfo entity_map;
-
-  // default values for any missing fields for new entities
-  //
-  RemoteEntityInfo entity_template;
-}
