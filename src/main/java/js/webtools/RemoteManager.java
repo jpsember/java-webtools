@@ -14,7 +14,7 @@ public class RemoteManager extends BaseObject {
   public static final RemoteManager SHARED_INSTANCE = new RemoteManager();
 
   private RemoteManager() {
-    alertVerbose();
+    //alertVerbose();
   }
 
   public RemoteInfo.Builder info() {
