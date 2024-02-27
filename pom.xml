@@ -7,7 +7,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	<httpclient.version>4.5.14</httpclient.version>
+	  <httpclient.version>4.5.14</httpclient.version>
   </properties>
 
   <build>
@@ -69,12 +69,6 @@
         <version>1.12.455</version>
     </dependency>
 
-<!--   	<dependency>
-  	  <groupId>com.jcraft</groupId>
-  	  <artifactId>jsch</artifactId>
-  	  <version>0.1.55</version>
-  	</dependency>
- -->
   </dependencies>
 
 </project>
