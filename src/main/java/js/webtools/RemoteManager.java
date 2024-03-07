@@ -22,14 +22,14 @@ public class RemoteManager extends BaseObject {
       var f = persistFile();
       mRemoteInfo = Files.parseAbstractDataOpt(RemoteInfo.DEFAULT_INSTANCE, persistFile()).toBuilder();
       log("parsed RemoteInfo from:", INDENT, Files.infoMap(f), CR, mRemoteInfo);
-      sRemoteInfoModified = false;
+      mRemoteInfoModified = false;
     }
     return mRemoteInfo;
   }
 
   public RemoteInfo.Builder infoEdit() {
     var b = info();
-    sRemoteInfoModified = true;
+    mRemoteInfoModified = true;
     return b;
   }
 
@@ -38,10 +38,10 @@ public class RemoteManager extends BaseObject {
   }
 
   public void flush() {
-    if (!sRemoteInfoModified)
+    if (!mRemoteInfoModified)
       return;
     Files.S.write(persistFile(), info());
-    sRemoteInfoModified = false;
+    mRemoteInfoModified = false;
   }
 
   public RemoteEntityInfo activeEntityOpt() {
@@ -77,6 +77,6 @@ public class RemoteManager extends BaseObject {
   }
 
   private RemoteInfo.Builder mRemoteInfo;
-  private boolean sRemoteInfoModified;
+  private boolean mRemoteInfoModified;
 
 }
