@@ -1,8 +1,10 @@
 fields {
   string label;
-  string user;
+  string user = "root";
   string url;
   int port;
+  string host;
+  JSMap host_info;    // information provided by host
 
   // Default directory (must be absolute)
   File project_dir;

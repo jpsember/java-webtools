@@ -23,6 +23,14 @@ public class RemoteEntityInfo implements AbstractData {
     return mPort;
   }
 
+  public String host() {
+    return mHost;
+  }
+
+  public JSMap hostInfo() {
+    return mHostInfo;
+  }
+
   public File projectDir() {
     return mProjectDir;
   }
@@ -36,7 +44,9 @@ public class RemoteEntityInfo implements AbstractData {
   protected static final String _1 = "user";
   protected static final String _2 = "url";
   protected static final String _3 = "port";
-  protected static final String _4 = "project_dir";
+  protected static final String _4 = "host";
+  protected static final String _5 = "host_info";
+  protected static final String _6 = "project_dir";
 
   @Override
   public String toString() {
@@ -50,7 +60,9 @@ public class RemoteEntityInfo implements AbstractData {
     m.putUnsafe(_1, mUser);
     m.putUnsafe(_2, mUrl);
     m.putUnsafe(_3, mPort);
-    m.putUnsafe(_4, mProjectDir.toString());
+    m.putUnsafe(_4, mHost);
+    m.putUnsafe(_5, mHostInfo);
+    m.putUnsafe(_6, mProjectDir.toString());
     return m;
   }
 
@@ -66,12 +78,20 @@ public class RemoteEntityInfo implements AbstractData {
 
   private RemoteEntityInfo(JSMap m) {
     mLabel = m.opt(_0, "");
-    mUser = m.opt(_1, "");
+    mUser = m.opt(_1, "root");
     mUrl = m.opt(_2, "");
     mPort = m.opt(_3, 0);
+    mHost = m.opt(_4, "");
+    {
+      mHostInfo = JSMap.DEFAULT_INSTANCE;
+      JSMap x = m.optJSMap(_5);
+      if (x != null) {
+        mHostInfo = x.lock();
+      }
+    }
     {
       mProjectDir = Files.DEFAULT;
-      String x = m.opt(_4, (String) null);
+      String x = m.opt(_6, (String) null);
       if (x != null) {
         mProjectDir = new File(x);
       }
@@ -99,6 +119,10 @@ public class RemoteEntityInfo implements AbstractData {
       return false;
     if (!(mPort == other.mPort))
       return false;
+    if (!(mHost.equals(other.mHost)))
+      return false;
+    if (!(mHostInfo.equals(other.mHostInfo)))
+      return false;
     if (!(mProjectDir.equals(other.mProjectDir)))
       return false;
     return true;
@@ -113,6 +137,8 @@ public class RemoteEntityInfo implements AbstractData {
       r = r * 37 + mUser.hashCode();
       r = r * 37 + mUrl.hashCode();
       r = r * 37 + mPort;
+      r = r * 37 + mHost.hashCode();
+      r = r * 37 + mHostInfo.hashCode();
       r = r * 37 + mProjectDir.hashCode();
       m__hashcode = r;
     }
@@ -123,6 +149,8 @@ public class RemoteEntityInfo implements AbstractData {
   protected String mUser;
   protected String mUrl;
   protected int mPort;
+  protected String mHost;
+  protected JSMap mHostInfo;
   protected File mProjectDir;
   protected int m__hashcode;
 
@@ -133,6 +161,8 @@ public class RemoteEntityInfo implements AbstractData {
       mUser = m.mUser;
       mUrl = m.mUrl;
       mPort = m.mPort;
+      mHost = m.mHost;
+      mHostInfo = m.mHostInfo;
       mProjectDir = m.mProjectDir;
     }
 
@@ -154,6 +184,8 @@ public class RemoteEntityInfo implements AbstractData {
       r.mUser = mUser;
       r.mUrl = mUrl;
       r.mPort = mPort;
+      r.mHost = mHost;
+      r.mHostInfo = mHostInfo;
       r.mProjectDir = mProjectDir;
       return r;
     }
@@ -164,7 +196,7 @@ public class RemoteEntityInfo implements AbstractData {
     }
 
     public Builder user(String x) {
-      mUser = (x == null) ? "" : x;
+      mUser = (x == null) ? "root" : x;
       return this;
     }
 
@@ -175,6 +207,16 @@ public class RemoteEntityInfo implements AbstractData {
 
     public Builder port(int x) {
       mPort = x;
+      return this;
+    }
+
+    public Builder host(String x) {
+      mHost = (x == null) ? "" : x;
+      return this;
+    }
+
+    public Builder hostInfo(JSMap x) {
+      mHostInfo = (x == null) ? JSMap.DEFAULT_INSTANCE : x;
       return this;
     }
 
@@ -189,8 +231,10 @@ public class RemoteEntityInfo implements AbstractData {
 
   private RemoteEntityInfo() {
     mLabel = "";
-    mUser = "";
+    mUser = "root";
     mUrl = "";
+    mHost = "";
+    mHostInfo = JSMap.DEFAULT_INSTANCE;
     mProjectDir = Files.DEFAULT;
   }
 
