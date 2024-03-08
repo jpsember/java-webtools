@@ -2,6 +2,7 @@
 // concerning the active remote handler, remote machnine
 
 fields {
-  string active_handler_name; // e.g. linode, ngrok
+  string active_handler_name = "user";
   RemoteEntityInfo active_entity;
+  map string RemoteEntityInfo user_entities;
 }
