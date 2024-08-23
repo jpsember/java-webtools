@@ -122,7 +122,7 @@ public final class WebRequest extends BaseObject {
   }
 
   public WebRequest setPostFile(File file) {
-    testOnlyAssert();
+    //testOnlyAssert();
     mPostFile = file;
     return setPost();
   }

@@ -236,9 +236,7 @@ public final class WebResponse extends BaseObject {
 
     mOutputArgs.put(WebTools.STACK_TRACE, stackTraceToList(t));
 
-    if (!testMode()) {
-      pr("setOutputError", INDENT, t, CR, mOutputArgs);
-    }
+    pr("setOutputError", INDENT, t, CR, mOutputArgs);
   }
 
   /**

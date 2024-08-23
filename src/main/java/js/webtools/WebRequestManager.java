@@ -63,11 +63,6 @@ public abstract class WebRequestManager implements WebRequestExecutor {
     return executor;
   }
 
-  public final void setAllowUnfilteredRequests(boolean allowed) {
-    testOnlyAssert();
-    mUnfilteredDisabled = !allowed;
-  }
-
   public final boolean containsFilters() {
     return !mRequestFilters.isEmpty();
   }
