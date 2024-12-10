@@ -30,13 +30,13 @@
     <dependency>
       <groupId>com.jsbase</groupId>
       <artifactId>java-core</artifactId>
-      <version>1000</version>
+      <version>3.0</version>
     </dependency>
 
     <dependency>
       <groupId>com.jsbase</groupId>
       <artifactId>java-testutil</artifactId>
-      <version>1000</version>
+      <version>3.0</version>
       <scope>test</scope>
     </dependency>
 
